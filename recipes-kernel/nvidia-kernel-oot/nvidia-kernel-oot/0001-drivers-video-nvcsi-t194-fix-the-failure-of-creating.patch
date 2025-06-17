@@ -1,0 +1,58 @@
+From d8b9fbb727c2409de1e911725e87ee921c11e84a Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Tue, 17 Jun 2025 17:13:01 +0800
+Subject: [PATCH] drivers: video: nvcsi-t194: fix the failure of creating
+ device link
+
+During system boots up, there is below error reported:
+t194-nvcsi 13e00000.host1x:nvcsi@15a00000: Failed to create
+device link (0x180) with 9-001a.
+In tegra234-p3737-camera-imx477-overlay.dts file, there are
+endpoints as below
+nvcsi@15a00000 {
+	......
+	imx477_csi_in0: endpoint@0 {
+		......
+		remote-endpoint = <&imx477_out0>;
+	};
+	......
+}
+......
+imx477_a@1a {
+	......
+	imx477_out0: endpoint {
+		......
+		remote-endpoint = <&imx477_csi_in0>;
+	};
+}
+During the kernel boot process, the nvhost-nvcsi-t194 device
+is registered before the nv_imx477 device. This causes
+nvhost-nvcsi-t194 to be recognized as a consumer while nv_imx477
+is identified as a supplier when parsing the device node for
+device linking. However, if nvhost-nvcsi-t194 binds to its driver
+before the nv_imx477 device does, the nv_imx477 driver fails to
+establish the device link to nvhost-nvcsi-t194. This occurs because
+nvhost-nvcsi-t194 is actually the consumer device and has already
+been successfully probed beforehand, which violates the device link
+policy. To resolve this issue, we ensure that the nv_imx477 device
+is probed prior to nvhost-nvcsi-t194 device.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ drivers/video/tegra/host/nvcsi/nvcsi-t194.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/video/tegra/host/nvcsi/nvcsi-t194.c b/drivers/video/tegra/host/nvcsi/nvcsi-t194.c
+index 95dc515..63a4269 100644
+--- a/drivers/video/tegra/host/nvcsi/nvcsi-t194.c
++++ b/drivers/video/tegra/host/nvcsi/nvcsi-t194.c
+@@ -276,3 +276,4 @@ static struct platform_driver t194_nvcsi_driver = {
+ 
+ module_platform_driver(t194_nvcsi_driver);
+ MODULE_LICENSE("GPL");
++MODULE_SOFTDEP("pre: nv_imx477");
+-- 
+2.34.1
+

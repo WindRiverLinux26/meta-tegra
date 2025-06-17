@@ -1,0 +1,1130 @@
+From 18414b931d5825c2e6878bdfa3e504aaeaaa2ab0 Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Thu, 19 Jun 2025 12:24:12 +0800
+Subject: [PATCH] t23x: overlay: add dts to support Arducam 6 channels of
+ camera imx477 on Orin AGX platform
+
+In below link, select radio button of "Partner Camera Solution",
+https://marketplace.nvidia.com/en-us/enterprise/robotics-edge/
+it shows that the Arducam camera module B0473 is supported by
+NVIDIA jetpack 6.2 SDK on Orin AGX board. There is imx477 driver
+in NVIDIA kernel oot source code package, but there is no corresponding
+dts for the  imx477 camera. So, refer to below 2 xisting camera dts
+to create a dts file for Arducam 6 channels of camera imx477.
+tegra234-p3767-camera-p3768-imx477-dual.dts
+ tegra234-p3737-camera-imx390-overlay.dts
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ overlay/Makefile                              |    1 +
+ .../tegra234-p3737-camera-imx477-overlay.dts  | 1084 +++++++++++++++++
+ 2 files changed, 1085 insertions(+)
+ create mode 100644 overlay/tegra234-p3737-camera-imx477-overlay.dts
+
+diff --git a/overlay/Makefile b/overlay/Makefile
+index 93728f4..9528c94 100644
+--- a/overlay/Makefile
++++ b/overlay/Makefile
+@@ -52,6 +52,7 @@ dtbo-y += tegra234-p3767-camera-p3768-imx477-imx219.dtbo
+ dtbo-y += tegra234-p3737-camera-eCAM130A-overlay.dtbo
+ dtbo-y += tegra234-p3737-camera-dual-hawk-ar0234-e3653-overlay.dtbo
+ dtbo-y += tegra234-p3737-camera-imx390-overlay.dtbo
++dtbo-y += tegra234-p3737-camera-imx477-overlay.dtbo
+ dtbo-y += tegra234-p3737-camera-imx390-addr-0x21-overlay.dtbo
+ dtbo-y += tegra234-p3737-camera-p3762-a00-1Hawk-overlay.dtbo
+ dtbo-y += tegra234-p3737-camera-p3762-a00-2Hawk-overlay.dtbo
+diff --git a/overlay/tegra234-p3737-camera-imx477-overlay.dts b/overlay/tegra234-p3737-camera-imx477-overlay.dts
+new file mode 100644
+index 0000000..449c6eb
+--- /dev/null
++++ b/overlay/tegra234-p3737-camera-imx477-overlay.dts
+@@ -0,0 +1,1084 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// SPDX-FileCopyrightText: Copyright (C) 2025 Wind River Systems Inc. All rights reserved.
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/clock/tegra234-clock.h>
++#include <dt-bindings/gpio/tegra234-gpio.h>
++#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
++
++/ {
++	overlay-name = "Jetson Camera IMX477";
++	jetson-header-name = "Jetson AGX CSI Connector";
++	compatible = JETSON_COMPATIBLE;
++
++	fragment@0 {
++		target-path = "/";
++
++		__overlay__ {
++
++			tegra-capture-vi {
++				num-channels = <6>;
++
++				ports {
++					port@0 {
++						status = "okay";
++						reg = <0>;
++
++						imx477_vi_in0: endpoint {
++							port-index = <0>;
++							bus-width = <2>;
++							remote-endpoint = <&imx477_csi_out0>;
++							status = "okay";
++						};
++					};
++
++					port@1 {
++						status = "okay";
++						reg = <1>;
++
++						imx477_vi_in1: endpoint {
++							port-index = <2>;
++							bus-width = <2>;
++							remote-endpoint = <&imx477_csi_out1>;
++							status = "okay";
++						};
++					};
++
++					port@2 {
++						status = "okay";
++						reg = <2>;
++
++						imx477_vi_in2: endpoint {
++							port-index = <4>;
++							bus-width = <2>;
++							remote-endpoint = <&imx477_csi_out2>;
++							status = "okay";
++						};
++					};
++
++					port@3 {
++						status = "okay";
++						reg = <3>;
++
++						imx477_vi_in3: endpoint {
++							port-index = <1>;
++							bus-width = <2>;
++							remote-endpoint = <&imx477_csi_out3>;
++							status = "okay";
++						};
++					};
++
++					port@4 {
++						status = "okay";
++						reg = <4>;
++
++						imx477_vi_in4: endpoint {
++							port-index = <3>;
++							bus-width = <2>;
++							remote-endpoint = <&imx477_csi_out4>;
++							status = "okay";
++						};
++					};
++
++					port@5 {
++						status = "okay";
++						reg = <5>;
++
++						imx477_vi_in5: endpoint {
++							port-index = <5>;
++							bus-width = <2>;
++							remote-endpoint = <&imx477_csi_out5>;
++							status = "okay";
++						};
++					};
++				};
++			};
++
++			tegra-camera-platform {
++				compatible = "nvidia, tegra-camera-platform";
++				num_csi_lanes = <12>;
++				max_lane_speed = <1500000>;
++				min_bits_per_pixel = <10>;
++				vi_peak_byte_per_pixel = <2>;
++				vi_bw_margin_pct = <25>;
++				max_pixel_rate = <160000>;
++				isp_peak_byte_per_pixel = <5>;
++				isp_bw_margin_pct = <25>;
++
++				modules {
++					module0 {
++						badge = "imx477_bottomleft";
++						position = "bottomleft";
++						orientation = "1";
++						status = "okay";
++
++						drivernode0 {
++							pcl_id = "v4l2_sensor";
++							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@70/i2c@0/imx477_a@1a";
++							status = "okay";
++						};
++					};
++
++					module1 {
++						badge = "imx477_bottomright";
++						position = "bottomright";
++						orientation = "1";
++						status = "okay";
++
++						drivernode0 {
++							pcl_id = "v4l2_sensor";
++							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@70/i2c@1/imx477_c@1a";
++							status = "okay";
++						};
++					};
++
++					module2 {
++						badge = "imx477_centerleft";
++						position = "centerleft";
++						orientation = "1";
++						status = "okay";
++
++						drivernode0 {
++							pcl_id = "v4l2_sensor";
++							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@70/i2c@2/imx477_e@1a";
++							status = "okay";
++						};
++					};
++
++					module3 {
++						badge = "imx477_centerright";
++						position = "centerright";
++						orientation = "1";
++						status = "okay";
++
++						drivernode0 {
++							pcl_id = "v4l2_sensor";
++							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@70/i2c@3/imx477_b@1a";
++							status = "okay";
++						};
++					};
++
++					module4 {
++						badge = "imx477_topleft";
++						position = "topleft";
++						orientation = "1";
++						status = "okay";
++
++						drivernode0 {
++							pcl_id = "v4l2_sensor";
++							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@70/i2c@4/imx477_d@1a";
++							status = "okay";
++						};
++					};
++
++					module5 {
++						badge = "imx477_topright";
++						position = "topright";
++						orientation = "1";
++						status = "okay";
++
++						drivernode0 {
++							pcl_id = "v4l2_sensor";
++							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@70/i2c@5/imx477_f@1a";
++							status = "okay";
++						};
++					};
++				};
++			};
++
++			bus@0 {
++				host1x@13e00000 {
++					nvcsi@15a00000 {
++						num-channels = <6>;
++						#address-cells = <1>;
++						#size-cells = <0>;
++
++						channel@0 {
++							reg = <0>;
++							status = "okay";
++
++							ports {
++								#address-cells = <1>;
++								#size-cells = <0>;
++
++								port@0 {
++									reg = <0>;
++									status = "okay";
++
++									imx477_csi_in0: endpoint@0 {
++										port-index = <0>;
++										bus-width = <2>;
++										remote-endpoint = <&imx477_out0>;
++										status = "okay";
++									};
++								};
++
++								port@1 {
++									reg = <1>;
++									status = "okay";
++
++									imx477_csi_out0: endpoint@1 {
++										remote-endpoint = <&imx477_vi_in0>;
++										status = "okay";
++									};
++								};
++							};
++						};
++
++						channel@1 {
++							reg = <1>;
++							status = "okay";
++
++							ports {
++								#address-cells = <1>;
++								#size-cells = <0>;
++
++								port@0 {
++									reg = <0>;
++									status = "okay";
++
++									imx477_csi_in1: endpoint@2 {
++										port-index = <2>;
++										bus-width = <2>;
++										remote-endpoint = <&imx477_out1>;
++										status = "okay";
++									};
++								};
++
++								port@1 {
++									reg = <1>;
++									status = "okay";
++
++									imx477_csi_out1: endpoint@3 {
++										remote-endpoint = <&imx477_vi_in1>;
++										status = "okay";
++									};
++								};
++							};
++						};
++
++						channel@2 {
++							reg = <2>;
++							status = "okay";
++
++							ports {
++								#address-cells = <1>;
++								#size-cells = <0>;
++
++								port@0 {
++									reg = <0>;
++									status = "okay";
++
++									imx477_csi_in2: endpoint@4 {
++										port-index = <4>;
++										bus-width = <2>;
++										remote-endpoint = <&imx477_out2>;
++										status = "okay";
++									};
++								};
++
++								port@1 {
++									reg = <1>;
++									status = "okay";
++
++									imx477_csi_out2: endpoint@5 {
++										remote-endpoint = <&imx477_vi_in2>;
++										status = "okay";
++									};
++								};
++							};
++						};
++
++						channel@3 {
++							reg = <3>;
++							status = "okay";
++
++							ports {
++								#address-cells = <1>;
++								#size-cells = <0>;
++
++								port@0 {
++									reg = <0>;
++									status = "okay";
++
++									imx477_csi_in3: endpoint@6 {
++										port-index = <1>;
++										bus-width = <2>;
++										remote-endpoint = <&imx477_out3>;
++										status = "okay";
++									};
++								};
++
++								port@1 {
++									reg = <1>;
++									status = "okay";
++
++									imx477_csi_out3: endpoint@7 {
++										remote-endpoint = <&imx477_vi_in3>;
++										status = "okay";
++									};
++								};
++							};
++						};
++
++						channel@4 {
++							reg = <4>;
++							status = "okay";
++
++							ports {
++								#address-cells = <1>;
++								#size-cells = <0>;
++
++								port@0 {
++									reg = <0>;
++									status = "okay";
++
++									imx477_csi_in4: endpoint@8 {
++										port-index = <3>;
++										bus-width = <2>;
++										remote-endpoint = <&imx477_out4>;
++										status = "okay";
++									};
++								};
++
++								port@1 {
++									reg = <1>;
++									status = "okay";
++
++									imx477_csi_out4: endpoint@9 {
++										remote-endpoint = <&imx477_vi_in4>;
++										status = "okay";
++									};
++								};
++							};
++						};
++
++						channel@5 {
++							reg = <5>;
++							status = "okay";
++
++							ports {
++								#address-cells = <1>;
++								#size-cells = <0>;
++
++								port@0 {
++									reg = <0>;
++									status = "okay";
++
++									imx477_csi_in5: endpoint@10 {
++										port-index = <6>;
++										bus-width = <2>;
++										remote-endpoint = <&imx477_out5>;
++										status = "okay";
++									};
++								};
++
++								port@1 {
++									reg = <1>;
++									status = "okay";
++
++									imx477_csi_out5: endpoint@11 {
++										remote-endpoint = <&imx477_vi_in5>;
++										status = "okay";
++									};
++								};
++							};
++						};
++					};
++				};
++
++				i2c@3180000 {
++
++					tca9534_38: tca9534@38 {
++						compatible = "nxp,pca9534";
++						gpio-controller;
++						#gpio-cells = <2>;
++						reg = <0x38>;
++					};
++
++					tca9548@70 {
++						compatible = "nxp,pca9548";
++						reg = <0x70>;
++						#address-cells = <1>;
++						#size-cells = <0>;
++						status = "okay";
++
++						i2c@0 {
++							reg = <0>;
++							i2c-mux,deselect-on-exit;
++
++							imx477_a@1a {
++								compatible = "ridgerun,imx477";
++								reg = <0x1a>;
++								devnode = "video0";
++								physical_w = "3.680";
++								physical_h = "2.760";
++								sensor_model = "imx477";
++								use_sensor_mode_id = "true";
++								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
++										<&bpmp TEGRA234_CLK_PLLP_OUT0>;
++								clock-names = "extperiph1", "pllp_grtba";
++								mclk = "extperiph1";
++								clock-frequency = <24000000>;
++								reset-gpios = <&tca9534_38 0 GPIO_ACTIVE_HIGH>;
++
++								mode0 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_a";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "3840";
++									active_h = "2160";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "11200";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "30000000";
++									step_framerate = "1";
++									default_framerate = "30000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								mode1 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_a";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "1920";
++									active_h = "1080";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "7000";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "60000000";
++									step_framerate = "1";
++									default_framerate = "60000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								ports {
++									#address-cells = <1>;
++									#size-cells = <0>;
++
++									port@0 {
++										reg = <0>;
++
++										imx477_out0: endpoint {
++											port-index = <0>;
++											bus-width = <2>;
++											remote-endpoint = <&imx477_csi_in0>;
++										};
++									};
++								};
++							};
++						};
++
++						i2c@1 {
++							reg = <1>;
++							i2c-mux,deselect-on-exit;
++
++							imx477_c@1a {
++								compatible = "ridgerun,imx477";
++								reg = <0x1a>;
++								devnode = "video1";
++								physical_w = "3.680";
++								physical_h = "2.760";
++								sensor_model = "imx477";
++								use_sensor_mode_id = "true";
++								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
++										<&bpmp TEGRA234_CLK_PLLP_OUT0>;
++								clock-names = "extperiph1", "pllp_grtba";
++								mclk = "extperiph1";
++								clock-frequency = <24000000>;
++								reset-gpios = <&tca9534_38 0x01 GPIO_ACTIVE_HIGH>;
++
++								mode0 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_c";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "3840";
++									active_h = "2160";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "11200";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "30000000";
++									step_framerate = "1";
++									default_framerate = "30000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								mode1 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_c";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "1920";
++									active_h = "1080";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "7000";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "60000000";
++									step_framerate = "1";
++									default_framerate = "60000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								ports {
++									#address-cells = <1>;
++									#size-cells = <0>;
++
++									port@0 {
++										reg = <0>;
++
++										imx477_out1: endpoint {
++											port-index = <2>;
++											bus-width = <2>;
++											remote-endpoint = <&imx477_csi_in1>;
++										};
++									};
++								};
++							};
++						};
++
++						i2c@2 {
++							reg = <2>;
++							i2c-mux,deselect-on-exit;
++
++							imx477_e@1a {
++								compatible = "ridgerun,imx477";
++								reg = <0x1a>;
++								devnode = "video2";
++								physical_w = "3.680";
++								physical_h = "2.760";
++								sensor_model = "imx477";
++								use_sensor_mode_id = "true";
++								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
++										<&bpmp TEGRA234_CLK_PLLP_OUT0>;
++								clock-names = "extperiph1", "pllp_grtba";
++								mclk = "extperiph1";
++								clock-frequency = <24000000>;
++								reset-gpios = <&tca9534_38 0x02 GPIO_ACTIVE_HIGH>;
++
++								mode0 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_e";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "3840";
++									active_h = "2160";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "11200";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "30000000";
++									step_framerate = "1";
++									default_framerate = "30000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								mode1 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_e";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "1920";
++									active_h = "1080";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "7000";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "60000000";
++									step_framerate = "1";
++									default_framerate = "60000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								ports {
++									#address-cells = <1>;
++									#size-cells = <0>;
++
++									port@0 {
++										reg = <0>;
++
++										imx477_out2: endpoint {
++											port-index = <4>;
++											bus-width = <2>;
++											remote-endpoint = <&imx477_csi_in2>;
++										};
++									};
++								};
++							};
++						};
++
++						i2c@3 {
++							reg = <3>;
++							i2c-mux,deselect-on-exit;
++
++							imx477_b@1a {
++								compatible = "ridgerun,imx477";
++								reg = <0x1a>;
++								devnode = "video3";
++								physical_w = "3.680";
++								physical_h = "2.760";
++								sensor_model = "imx477";
++								use_sensor_mode_id = "true";
++								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
++										<&bpmp TEGRA234_CLK_PLLP_OUT0>;
++								clock-names = "extperiph1", "pllp_grtba";
++								mclk = "extperiph1";
++								clock-frequency = <24000000>;
++								reset-gpios = <&tca9534_38 0x03 GPIO_ACTIVE_HIGH>;
++
++								mode0 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_b";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "3840";
++									active_h = "2160";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "11200";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "30000000";
++									step_framerate = "1";
++									default_framerate = "30000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								mode1 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_b";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "1920";
++									active_h = "1080";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "7000";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "60000000";
++									step_framerate = "1";
++									default_framerate = "60000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								ports {
++									#address-cells = <1>;
++									#size-cells = <0>;
++
++									port@0 {
++										reg = <0>;
++
++										imx477_out3: endpoint {
++											port-index = <1>;
++											bus-width = <2>;
++											remote-endpoint = <&imx477_csi_in3>;
++										};
++									};
++								};
++							};
++						};
++
++						i2c@4 {
++							reg = <4>;
++							i2c-mux,deselect-on-exit;
++
++							imx477_d@1a {
++								compatible = "ridgerun,imx477";
++								reg = <0x1a>;
++								devnode = "video4";
++								physical_w = "3.680";
++								physical_h = "2.760";
++								sensor_model = "imx477";
++								use_sensor_mode_id = "true";
++								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
++										<&bpmp TEGRA234_CLK_PLLP_OUT0>;
++								clock-names = "extperiph1", "pllp_grtba";
++								mclk = "extperiph1";
++								clock-frequency = <24000000>;
++								reset-gpios = <&tca9534_38 0x04 GPIO_ACTIVE_HIGH>;
++
++								mode0 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_d";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "3840";
++									active_h = "2160";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "11200";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "30000000";
++									step_framerate = "1";
++									default_framerate = "30000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								mode1 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_d";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "1920";
++									active_h = "1080";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "7000";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "60000000";
++									step_framerate = "1";
++									default_framerate = "60000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								ports {
++									#address-cells = <1>;
++									#size-cells = <0>;
++
++									port@0 {
++										reg = <0>;
++
++										imx477_out4: endpoint {
++											port-index = <3>;
++											bus-width = <2>;
++											remote-endpoint = <&imx477_csi_in4>;
++										};
++									};
++								};
++							};
++						};
++
++						i2c@5 {
++							reg = <5>;
++							i2c-mux,deselect-on-exit;
++
++							imx477_f@1a {
++								compatible = "ridgerun,imx477";
++								reg = <0x1a>;
++								devnode = "video5";
++								physical_w = "3.680";
++								physical_h = "2.760";
++								sensor_model = "imx477";
++								use_sensor_mode_id = "true";
++								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
++										<&bpmp TEGRA234_CLK_PLLP_OUT0>;
++								clock-names = "extperiph1", "pllp_grtba";
++								mclk = "extperiph1";
++								clock-frequency = <24000000>;
++								reset-gpios = <&tca9534_38 0x05 GPIO_ACTIVE_HIGH>;
++
++								mode0 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_g";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "3840";
++									active_h = "2160";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "11200";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "30000000";
++									step_framerate = "1";
++									default_framerate = "30000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								mode1 {
++									mclk_khz = "24000";
++									num_lanes = "2";
++									tegra_sinterface = "serial_g";
++									phy_mode = "DPHY";
++									discontinuous_clk = "no";
++									dpcm_enable = "false";
++									cil_settletime = "0";
++									active_w = "1920";
++									active_h = "1080";
++									mode_type = "bayer";
++									pixel_phase = "rggb";
++									csi_pixel_bit_depth = "10";
++									readout_orientation = "90";
++									line_length = "7000";
++									inherent_gain = "1";
++									mclk_multiplier = "80";
++									pix_clk_hz = "300000000";
++									gain_factor = "16";
++									framerate_factor = "1000000";
++									exposure_factor = "1000000";
++									min_gain_val = "16";
++									max_gain_val = "356";
++									step_gain_val = "1";
++									default_gain = "16";
++									min_hdr_ratio = "1";
++									max_hdr_ratio = "1";
++									min_framerate = "2000000";
++									max_framerate = "60000000";
++									step_framerate = "1";
++									default_framerate = "60000000";
++									min_exp_time = "13";
++									max_exp_time = "683709";
++									step_exp_time = "1";
++									default_exp_time = "2495";
++									embedded_metadata_height = "2";
++								};
++
++								ports {
++									#address-cells = <1>;
++									#size-cells = <0>;
++
++									port@0 {
++										reg = <0>;
++
++										imx477_out5: endpoint {
++											port-index = <6>;
++											bus-width = <2>;
++											remote-endpoint = <&imx477_csi_in5>;
++										};
++									};
++								};
++							};
++						};
++					};
++				};
++			};
++		};
++	};
++};
+-- 
+2.34.1
+
