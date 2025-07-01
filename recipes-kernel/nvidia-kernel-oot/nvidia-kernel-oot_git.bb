@@ -47,4 +47,5 @@ require nvidia-kernel-oot.inc
 EXTRA_PATCHES = "\
     file://0001-t23x-overlay-add-dts-to-support-Arducam-6-channels-o.patch;patchdir=hardware/nvidia/t23x/nv-public \
     file://0001-drivers-video-nvcsi-t194-fix-the-failure-of-creating.patch;patchdir=nvidia-oot \
+    file://0001-t23x-overlay-create-a-overlay-dts-to-support-for-boo.patch;patchdir=hardware/nvidia/t23x/nv-public \
 "

@@ -1,0 +1,252 @@
+From 74d51e0cde0c4e5d6add01581cfdc196601bd1dd Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Tue, 1 Jul 2025 13:44:28 +0800
+Subject: [PATCH] t23x: overlay: create a overlay dts to support for booting
+ NVIDIA Orin AGX platform directly
+
+So far, NVIDIA Yocto SDK only supports for loading dtb from configuration
+table of uefi firmware. The reason is as below:
+During deploying images onto board, the NVIDIA burn script concatenates
+that basic dtb and overlay dtbo files one by one at the end of uefi with
+4k bytes alignment. During booting system, uefi image gets the dtb and
+dtbo files, and then create a full feature dtb, and then modify some dts
+node based on specific board, and then register it into configuration
+table. When kernel boots up, the full feature dtb will be passed into
+kernel. Based on this kind of booting mode, it needs to spend on more
+than 20 minutes to burn the whole sysyem image even if user wants to
+update kernel image and dtb. It is very inconvinent and unacceptable burn
+the whole system image during debugging kernel and dtb. Therefore, in
+order to solve this issue, create a overly dts used to improve dtb so that
+it is able to be used to boot kernel directly.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ overlay/Makefile                              |   1 +
+ ...-p3737-0000+p3701-0005-nv-boot-overlay.dts | 201 ++++++++++++++++++
+ 2 files changed, 202 insertions(+)
+ create mode 100644 overlay/tegra234-p3737-0000+p3701-0005-nv-boot-overlay.dts
+
+diff --git a/overlay/Makefile b/overlay/Makefile
+index 9528c94..d5e9a0a 100644
+--- a/overlay/Makefile
++++ b/overlay/Makefile
+@@ -28,6 +28,7 @@ dtbo-y += tegra234-p3737-0000+p3701-0000-audio-respeaker-4-mic-lin-array.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-csi.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-hdr40.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-m2ke.dtbo
++dtbo-y += tegra234-p3737-0000+p3701-0005-nv-boot-overlay.dtbo
+ dtbo-y += tegra234-p3767-0000+p3509-a02-audio-adafruit-sph0645lm4h.dtbo
+ dtbo-y += tegra234-p3767-0000+p3509-a02-audio-adafruit-uda1334a.dtbo
+ dtbo-y += tegra234-p3767-0000+p3509-a02-audio-fe-pi.dtbo
+diff --git a/overlay/tegra234-p3737-0000+p3701-0005-nv-boot-overlay.dts b/overlay/tegra234-p3737-0000+p3701-0005-nv-boot-overlay.dts
+new file mode 100644
+index 0000000..11a4c33
+--- /dev/null
++++ b/overlay/tegra234-p3737-0000+p3701-0005-nv-boot-overlay.dts
+@@ -0,0 +1,201 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// SPDX-FileCopyrightText: Copyright (C) 2025 Wind River Systems Inc. All rights reserved.
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/gpio/tegra234-gpio.h>
++#include <dt-bindings/interrupt-controller/irq.h>
++#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
++
++/ {
++	overlay-name = "Jetson Orin Agx Boot Directly";
++	jetson-header-name = "Jetson Orin Agx Boot Directly";
++	compatible = JETSON_COMPATIBLE;
++
++	fragment@0 {
++		target-path = "/";
++
++		__overlay__ {
++
++			tegra-camera-platform {
++				modules {
++					module0 {
++						drivernode1 {
++							status = "disabled";
++						};
++					};
++
++					module1 {
++						drivernode1 {
++							status = "disabled";
++						};
++					};
++
++					module2 {
++						drivernode1 {
++							status = "disabled";
++						};
++					};
++
++					module3 {
++						drivernode1 {
++							status = "disabled";
++						};
++					};
++
++					module4 {
++						drivernode1 {
++							status = "disabled";
++						};
++					};
++
++					module5 {
++						drivernode1 {
++							status = "disabled";
++						};
++					};
++				};
++
++			};
++
++			bus@0 {
++				i2c@3180000 {
++					tca6408_21: tca6408@21 {
++						status = "disabled";
++					};
++
++					tca9548@77 {
++						status = "disabled";
++
++						i2c@0 {
++							ov5693_a@36 {
++								status = "disabled";
++							};
++						};
++
++						i2c@1 {
++							ov5693_b@36 {
++								status = "disabled";
++							};
++						};
++
++						i2c@2 {
++							ov5693_c@36 {
++								status = "disabled";
++							};
++						};
++
++						i2c@3 {
++							ov5693_d@36 {
++								status = "disabled";
++							};
++						};
++
++						i2c@4 {
++							ov5693_e@36 {
++								status = "disabled";
++							};
++						};
++
++						i2c@5 {
++							ov5693_g@36 {
++								status = "disabled";
++							};
++						};
++					};
++
++					tca9546@70 {
++						status = "disabled";
++
++						i2c@1 {
++							imx274_c@1a {
++								status = "disabled";
++							};
++						};
++
++						i2c@0 {
++							pca9570_a@24 {
++								status = "disabled";
++							};
++
++							imx274_a@1a {
++								status = "disabled";
++							};
++
++							imx185_a@1a {
++								status = "disabled";
++							};
++
++							imx318_a@10 {
++								status = "disabled";
++							};
++						};
++					};
++				};
++
++				i2c@c240000 {
++					ncp81599@74 {
++						status = "disabled";
++					};
++
++					typec@8 {
++						interrupt-parent = <&gpio>;
++						interrupts = <TEGRA234_MAIN_GPIO(Y, 4) IRQ_TYPE_LEVEL_LOW>;
++					};
++				};
++
++				pcie@141a0000 {
++					status = "okay";
++					vpcie12v-supply = <&vdd_12v_pcie>;
++				};
++
++				pcie-ep@141a0000 {
++					status = "disabled";
++					nvidia,refclk-select-gpios = <&gpio
++							TEGRA234_MAIN_GPIO(Q, 4)
++							GPIO_ACTIVE_HIGH>;
++				};
++
++				spi@3270000 {
++					status = "disabled";
++				};
++			};
++
++			regulator-vdd-3v3-pcie {
++				gpio = <&gpio TEGRA234_MAIN_GPIO(H, 4) GPIO_ACTIVE_HIGH>;
++			};
++
++			firmware {
++				optee {
++					status = "okay";
++				};
++
++				uefi {
++					firmware-media-overlays-applied;
++				};
++			};
++
++			reserved-memory {
++				pva-carveout {
++					nomap;
++					status = "okay";
++					reg = <0x10 0x2d980000 0x00 0x280000>;
++					compatible = "nvidia,pva-carveout";
++				};
++
++				ramoops_carveout {
++					reg = <0x10 0x2cdf0000 0x00 0x200000>;
++				};
++
++				fsi-carveout {
++					reg = <0x10 0x2f000000 0x00 0x1000000>;
++				};
++
++				vpr-carveout {
++					reg = <0x10 0x49800000 0x00 0x36800000>;
++				};
++			};
++		};
++	};
++};
+-- 
+2.34.1
+
