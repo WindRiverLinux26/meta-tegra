@@ -1,0 +1,28 @@
+From 04d77eb60b15ba0a4e122d22c688bdc4fa47bc24 Mon Sep 17 00:00:00 2001
+From: Xiangyu Chen <xiangyu.chen@windriver.com>
+Date: Wed, 23 Jul 2025 02:51:09 +0000
+Subject: [PATCH] lttng-tracepoint: discard warning message on NVIDIA platform
+
+Upstream-Status: Inappropriate [wrlinux specific]
+
+Signed-off-by: Xiangyu Chen <xiangyu.chen@windriver.com>
+---
+ src/lttng-tracepoint.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lttng-tracepoint.c b/src/lttng-tracepoint.c
+index 35aa07eb..30f23a4b 100644
+--- a/src/lttng-tracepoint.c
++++ b/src/lttng-tracepoint.c
+@@ -241,7 +241,7 @@ int lttng_tracepoint_coming(struct tp_module *tp_mod)
+ 		}
+ 		/* If already enabled, just check consistency */
+ 		if (e->tp) {
+-			WARN_ON(e->tp != tp);
++			//WARN_ON(e->tp != tp);
+ 			continue;
+ 		}
+ 		e->tp = tp;
+-- 
+2.34.1
+
