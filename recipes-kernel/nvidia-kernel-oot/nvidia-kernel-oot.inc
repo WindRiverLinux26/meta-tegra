@@ -467,3 +467,8 @@ python oot_update_rprovides() {
             d.setVar('RDEPENDS:' + oot_pkg, newdepstr)
 }
 PACKAGESPLITFUNCS += "oot_update_rprovides"
+
+# Prevent to load tegra23x_perf_uncore, because it is not compatible with pum driver
+# of kernel v6.12, and cause hardware events lose.
+KERNEL_MODULE_PROBECONF += "tegra23x_perf_uncore"
+module_conf_tegra23x_perf_uncore = "blacklist tegra23x_perf_uncore"
