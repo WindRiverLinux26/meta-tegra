@@ -1,0 +1,48 @@
+From 7709470555086f3a6050af0de57252633163c17f Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Tue, 29 Jul 2025 19:16:31 +0800
+Subject: [PATCH] net: nvethernet: generate a random mac address
+
+If there is no mac address configuration in dts, generate a
+random mac address so that ethernet card starts up normally.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ drivers/net/ethernet/nvidia/nvethernet/ether_linux.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/ethernet/nvidia/nvethernet/ether_linux.c b/drivers/net/ethernet/nvidia/nvethernet/ether_linux.c
+index 2048d2c..b00b5a1 100644
+--- a/drivers/net/ethernet/nvidia/nvethernet/ether_linux.c
++++ b/drivers/net/ethernet/nvidia/nvethernet/ether_linux.c
+@@ -4741,7 +4741,6 @@ static int ether_get_mac_address(struct ether_priv_data *pdata)
+ 	struct net_device *ndev = pdata->ndev;
+ 	struct device_node *np = dev->of_node;
+ 	const char *eth_mac_addr = NULL;
+-	u8 *addr = NULL;
+ 	unsigned char mac_addr[ETH_ALEN] = {0};
+ 	/* Default choesn node property name for MAC address */
+ 	char str_mac_address[ETH_MAC_STR_LEN] = "nvidia,ether-mac";
+@@ -4788,12 +4787,13 @@ static int ether_get_mac_address(struct ether_priv_data *pdata)
+ 		 * upstream driver should have only this call to get
+ 		 * MAC address
+ 		 */
+-		ret = of_get_mac_address(np, addr);
++		ret = of_get_mac_address(np, mac_addr);
+ 		if (ret < 0) {
+-			dev_err(dev, "No Mac address local DT!\n");
+-			return ret;
++			dev_info(dev, "No Mac address local DT!\n");
++			eth_random_addr(mac_addr);
++			ret = 0;
+ 		}
+-		eth_mac_addr = addr;
++		eth_mac_addr = mac_addr;
+ 	}
+ 
+ 	/* Found a valid mac address */
+-- 
+2.34.1
+
