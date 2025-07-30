@@ -49,4 +49,5 @@ EXTRA_PATCHES = "\
     file://0001-drivers-video-nvcsi-t194-fix-the-failure-of-creating.patch;patchdir=nvidia-oot \
     file://0001-t23x-overlay-create-a-overlay-dts-to-support-for-boo.patch;patchdir=hardware/nvidia/t23x/nv-public \
     file://0001-net-nvethernet-generate-a-random-mac-address.patch;patchdir=nvidia-oot \
+    file://0001-Fix-rcu-stall-when-CONFIG_SHADOW_CALL_STACK-enabled.patch;patchdir=nvdisplay \
 "

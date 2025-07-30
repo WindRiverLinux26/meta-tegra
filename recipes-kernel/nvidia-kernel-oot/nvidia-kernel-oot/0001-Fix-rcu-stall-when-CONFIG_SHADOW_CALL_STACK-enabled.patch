@@ -1,0 +1,50 @@
+From c3398c7c51466b52dd28caef5bfdbdde813b67e7 Mon Sep 17 00:00:00 2001
+From: Xiangyu Chen <xiangyu.chen@windriver.com>
+Date: Wed, 30 Jul 2025 05:02:51 +0000
+Subject: [PATCH] Fix rcu-stall when CONFIG_SHADOW_CALL_STACK enabled
+
+On aarch64, the instrumentation makes use of the x18 register to reference
+the shadow call stack, meaning that references to the shadow call stack don't
+have to be stored in memory.
+
+This feature on aarch64 also need to be supported by compiler, for gcc, it
+need to turn on the option -ffixed-x18 [1]
+
+Upstream-Status: Inappropriate [wrlinux specific]
+
+Ref:
+[1] https://gcc.gnu.org/pipermail/gcc-patches/2022-January/588946.html
+
+Signed-off-by: Xiangyu Chen <xiangyu.chen@windriver.com>
+---
+ src/nvidia-modeset/Makefile | 1 +
+ src/nvidia/Makefile         | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/src/nvidia-modeset/Makefile b/src/nvidia-modeset/Makefile
+index 7f648ff..6ff3f4d 100644
+--- a/src/nvidia-modeset/Makefile
++++ b/src/nvidia-modeset/Makefile
+@@ -95,6 +95,7 @@ endif
+ ifeq ($(TARGET_ARCH),aarch64)
+   CFLAGS += -mgeneral-regs-only
+   CFLAGS += -march=armv8-a
++  CFLAGS += -ffixed-x18
+   CONDITIONAL_CFLAGS += $(call TEST_CC_ARG, -mno-outline-atomics)
+ endif
+ 
+diff --git a/src/nvidia/Makefile b/src/nvidia/Makefile
+index 6973fcf..db71cf4 100644
+--- a/src/nvidia/Makefile
++++ b/src/nvidia/Makefile
+@@ -82,6 +82,7 @@ ifeq ($(TARGET_ARCH),aarch64)
+   CFLAGS += -mgeneral-regs-only
+   CFLAGS += -march=armv8-a
+   CFLAGS += -mstrict-align
++  CFLAGS += -ffixed-x18
+   CONDITIONAL_CFLAGS += $(call TEST_CC_ARG, -mno-outline-atomics)
+ endif
+ 
+-- 
+2.34.1
+
