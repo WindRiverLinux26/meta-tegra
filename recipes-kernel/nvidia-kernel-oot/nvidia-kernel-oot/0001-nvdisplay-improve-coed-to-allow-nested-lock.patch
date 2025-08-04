@@ -1,0 +1,213 @@
+From bbdbeffbd523e5b6133a2343611b330b37d766e5 Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Mon, 4 Aug 2025 17:33:41 +0800
+Subject: [PATCH] nvdisplay: improve coed to allow nested lock
+
+When kernel boots up with lock debug related configs, there is below
+recursive locking warning reported:
+
+============================================
+WARNING: possible recursive locking detected
+6.12.40-yocto-standard #1 Tainted: G        W  O
+--------------------------------------------
+systemd-modules/602 is trying to acquire lock:
+ffff000093bc8c78 (os_rwlock){+.+.}-{3:3}, at: os_acquire_rwlock_write+0x40/0x80 [nvidia]
+
+but task is already holding lock:
+ffff000082f60078 (os_rwlock){+.+.}-{3:3}, at: os_acquire_rwlock_write+0x40/0x80 [nvidia]
+
+other info that might help us debug this:
+ Possible unsafe locking scenario:
+
+       CPU0
+       ----
+  lock(os_rwlock);
+  lock(os_rwlock);
+
+ *** DEADLOCK ***
+
+ May be due to missing lock nesting notation
+
+1 lock held by systemd-modules/602:
+ #0: ffff000082f60078 (os_rwlock){+.+.}-{3:3}, at: os_acquire_rwlock_write+0x40/0x80 [nvidia]
+
+stack backtrace:
+CPU: 7 UID: 0 PID: 602 Comm: systemd-modules Tainted: G  W  O 6.12.40-yocto-standard #1
+Tainted: [W]=WARN, [O]=OOT_MODULE
+Hardware name: NVIDIA NVIDIA Jetson AGX Orin Developer Kit/Jetson, BIOS v36.4.3 08/09/2023
+Call trace:
+ ......
+ down_write+0x40/0xe0
+ os_acquire_rwlock_write+0x40/0x80 [nvidia]
+ portSyncRwLockAcquireWrite+0x3c/0xc0 [nvidia]
+ serverAllocClient+0x20c/0x4e0 [nvidia]
+ serverAllocResource+0x2b0/0x420 [nvidia]
+ rmapiAllocWithSecInfo+0x198/0x300 [nvidia]
+ rmapiAllocWithSecInfoTls+0x74/0xc0 [nvidia]
+ _nv04Alloc+0x78/0xc0 [nvidia]
+ nvkms_call_rm+0x60/0xa8 [nvidia_modeset]
+ nvRmApiAlloc+0x4c/0x60 [nvidia_modeset]
+ ......
+ el0t_64_sync+0x190/0x198
+
+After checking code, the invoking order of the 2 locks is fixed as below
+acquire lock1
+acquire lock2
+release lock1
+release lock2
+So, improve code to allow nested lock.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ kernel-open/common/inc/os-interface.h            |  1 +
+ kernel-open/nvidia/os-interface.c                | 14 ++++++++++++++
+ .../arch/nvalloc/unix/include/os-interface.h     |  1 +
+ src/nvidia/generated/g_resserv_nvoc.h            |  1 +
+ src/nvidia/inc/libraries/nvport/sync.h           | 16 ++++++++++++++++
+ src/nvidia/inc/libraries/resserv/resserv.h       |  1 +
+ .../libraries/nvport/sync/sync_unix_kernel_os.c  | 13 +++++++++++++
+ src/nvidia/src/libraries/resserv/src/rs_server.c |  2 +-
+ 8 files changed, 48 insertions(+), 1 deletion(-)
+
+diff --git a/kernel-open/common/inc/os-interface.h b/kernel-open/common/inc/os-interface.h
+index bb5dcdc..ff1f196 100644
+--- a/kernel-open/common/inc/os-interface.h
++++ b/kernel-open/common/inc/os-interface.h
+@@ -147,6 +147,7 @@ void*       NV_API_CALL  os_alloc_rwlock             (void);
+ void        NV_API_CALL  os_free_rwlock              (void *);
+ NV_STATUS   NV_API_CALL  os_acquire_rwlock_read      (void *);
+ NV_STATUS   NV_API_CALL  os_acquire_rwlock_write     (void *);
++NV_STATUS   NV_API_CALL  os_acquire_rwlock_write_nested     (void *);
+ NV_STATUS   NV_API_CALL  os_cond_acquire_rwlock_read (void *);
+ NV_STATUS   NV_API_CALL  os_cond_acquire_rwlock_write(void *);
+ void        NV_API_CALL  os_release_rwlock_read      (void *);
+diff --git a/kernel-open/nvidia/os-interface.c b/kernel-open/nvidia/os-interface.c
+index c1fe200..295917a 100644
+--- a/kernel-open/nvidia/os-interface.c
++++ b/kernel-open/nvidia/os-interface.c
+@@ -283,6 +283,20 @@ NV_STATUS NV_API_CALL os_acquire_rwlock_write(void *pRwLock)
+         return NV_ERR_INVALID_REQUEST;
+     }
+     down_write(os_rwlock);
++
++    return NV_OK;
++}
++
++NV_STATUS NV_API_CALL os_acquire_rwlock_write_nested(void *pRwLock)
++{
++    os_rwlock_t *os_rwlock = (os_rwlock_t *)pRwLock;
++
++    if (!NV_MAY_SLEEP())
++    {
++        return NV_ERR_INVALID_REQUEST;
++    }
++    down_write_nested(os_rwlock, SINGLE_DEPTH_NESTING);
++
+     return NV_OK;
+ }
+ 
+diff --git a/src/nvidia/arch/nvalloc/unix/include/os-interface.h b/src/nvidia/arch/nvalloc/unix/include/os-interface.h
+index bb5dcdc..ff1f196 100644
+--- a/src/nvidia/arch/nvalloc/unix/include/os-interface.h
++++ b/src/nvidia/arch/nvalloc/unix/include/os-interface.h
+@@ -147,6 +147,7 @@ void*       NV_API_CALL  os_alloc_rwlock             (void);
+ void        NV_API_CALL  os_free_rwlock              (void *);
+ NV_STATUS   NV_API_CALL  os_acquire_rwlock_read      (void *);
+ NV_STATUS   NV_API_CALL  os_acquire_rwlock_write     (void *);
++NV_STATUS   NV_API_CALL  os_acquire_rwlock_write_nested     (void *);
+ NV_STATUS   NV_API_CALL  os_cond_acquire_rwlock_read (void *);
+ NV_STATUS   NV_API_CALL  os_cond_acquire_rwlock_write(void *);
+ void        NV_API_CALL  os_release_rwlock_read      (void *);
+diff --git a/src/nvidia/generated/g_resserv_nvoc.h b/src/nvidia/generated/g_resserv_nvoc.h
+index a68bb80..f523d7a 100644
+--- a/src/nvidia/generated/g_resserv_nvoc.h
++++ b/src/nvidia/generated/g_resserv_nvoc.h
+@@ -406,6 +406,7 @@ struct ACCESS_CONTROL
+ #define RS_LOCK_VALIDATOR_INIT(lock, lockClass, inst)
+ #define RS_RWLOCK_ACQUIRE_READ(lock, validator)                     do { portSyncRwLockAcquireRead((lock)); } while(0)
+ #define RS_RWLOCK_ACQUIRE_WRITE(lock, validator)                    do { portSyncRwLockAcquireWrite((lock)); } while(0)
++#define RS_RWLOCK_ACQUIRE_WRITE_NESTED(lock, validator)             do { portSyncRwLockAcquireWriteNested((lock)); } while(0)
+ #define RS_RWLOCK_RELEASE_READ_EXT(lock, validator, bOutOfOrder)    do { portSyncRwLockReleaseRead((lock)); } while(0)
+ #define RS_RWLOCK_RELEASE_WRITE_EXT(lock, validator, bOutOfOrder)   do { portSyncRwLockReleaseWrite((lock)); } while(0)
+ #endif
+diff --git a/src/nvidia/inc/libraries/nvport/sync.h b/src/nvidia/inc/libraries/nvport/sync.h
+index 29e472d..b4cc8df 100644
+--- a/src/nvidia/inc/libraries/nvport/sync.h
++++ b/src/nvidia/inc/libraries/nvport/sync.h
+@@ -622,6 +622,22 @@ NvBool NV_FORCERESULTCHECK portSyncRwLockAcquireReadConditional(PORT_RWLOCK *pLo
+  * @post Windows: Normal APCs will be disabled.
+  */
+ void portSyncRwLockAcquireWrite(PORT_RWLOCK *pLock);
++/**
++ * @brief Acquires the write (exclusive) lock on the given RW_LOCK and allow nesting
++ *
++ * If the lock cannot be immediately acquired, the thread will sleep.
++ *
++ * @par Checked builds only:
++ * Will assert if pLock == NULL <br>
++ * Will assert if the lock is held by the current thread <br>
++ * Will assert if the IRQL/interrupt context preconditions are not satisfied.
++ *
++ * @pre Windows: IRQL <= APC_LEVEL
++ * @pre Unix:    Non-interrupt context
++ * @note May put the thread to sleep.
++ * @post Windows: Normal APCs will be disabled.
++ */
++void portSyncRwLockAcquireWriteNested(PORT_RWLOCK *pLock);
+ /**
+  * @brief Conditionally acquires the write (exclusive) lock on the given RW_LOCK
+  *
+diff --git a/src/nvidia/inc/libraries/resserv/resserv.h b/src/nvidia/inc/libraries/resserv/resserv.h
+index 9b61445..8d2b9f3 100644
+--- a/src/nvidia/inc/libraries/resserv/resserv.h
++++ b/src/nvidia/inc/libraries/resserv/resserv.h
+@@ -365,6 +365,7 @@ struct ACCESS_CONTROL
+ #define RS_LOCK_VALIDATOR_INIT(lock, lockClass, inst)
+ #define RS_RWLOCK_ACQUIRE_READ(lock, validator)                     do { portSyncRwLockAcquireRead((lock)); } while(0)
+ #define RS_RWLOCK_ACQUIRE_WRITE(lock, validator)                    do { portSyncRwLockAcquireWrite((lock)); } while(0)
++#define RS_RWLOCK_ACQUIRE_WRITE_NESTED(lock, validator)             do { portSyncRwLockAcquireWriteNested((lock)); } while(0)
+ #define RS_RWLOCK_RELEASE_READ_EXT(lock, validator, bOutOfOrder)    do { portSyncRwLockReleaseRead((lock)); } while(0)
+ #define RS_RWLOCK_RELEASE_WRITE_EXT(lock, validator, bOutOfOrder)   do { portSyncRwLockReleaseWrite((lock)); } while(0)
+ #endif
+diff --git a/src/nvidia/src/libraries/nvport/sync/sync_unix_kernel_os.c b/src/nvidia/src/libraries/nvport/sync/sync_unix_kernel_os.c
+index 9a54577..f2b6355 100644
+--- a/src/nvidia/src/libraries/nvport/sync/sync_unix_kernel_os.c
++++ b/src/nvidia/src/libraries/nvport/sync/sync_unix_kernel_os.c
+@@ -285,6 +285,19 @@ portSyncRwLockAcquireWrite
+     PORT_ASSERT(status == NV_OK);
+ }
+ 
++void
++portSyncRwLockAcquireWriteNested
++(
++    PORT_RWLOCK *pRwLock
++)
++{
++    NV_STATUS status;
++    PORT_ASSERT_CHECKED(pRwLock != NULL);
++    PORT_ASSERT_CHECKED(portSyncExSafeToSleep());;
++    status = os_acquire_rwlock_write_nested(pRwLock->rwlock);
++    PORT_ASSERT(status == NV_OK);
++}
++
+ NvBool
+ portSyncRwLockAcquireWriteConditional
+ (
+diff --git a/src/nvidia/src/libraries/resserv/src/rs_server.c b/src/nvidia/src/libraries/resserv/src/rs_server.c
+index c775f83..1e4019c 100644
+--- a/src/nvidia/src/libraries/resserv/src/rs_server.c
++++ b/src/nvidia/src/libraries/resserv/src/rs_server.c
+@@ -2378,7 +2378,7 @@ _serverCreateEntryAndLockForNewClient
+         goto _serverCreateEntryAndLockForNewClient_exit;
+     }
+ 
+-    RS_RWLOCK_ACQUIRE_WRITE(pClientEntry->pLock, &pClientEntry->lockVal);
++    RS_RWLOCK_ACQUIRE_WRITE_NESTED(pClientEntry->pLock, &pClientEntry->lockVal);
+     pClientEntry->lockOwnerTid = portThreadGetCurrentThreadId();
+ 
+     *phClient = hClient;
+-- 
+2.34.1
+
