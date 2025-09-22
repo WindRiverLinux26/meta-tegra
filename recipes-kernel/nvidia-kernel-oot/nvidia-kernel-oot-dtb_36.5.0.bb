@@ -28,7 +28,11 @@ do_deploy() {
         basic_dtb=$(echo "${KERNEL_DEVICETREE}" | cut -d' ' -f1)
         basic_dtb_basename="${basic_dtb%.*}"
         cd ${DEPLOYDIR}/devicetree/
-        fdtoverlay -i ${basic_dtb} -o ${basic_dtb_basename}-bootable.dtb ${TEGRA_PLUGIN_MANAGER_OVERLAYS} ${BOOTABLE_OVERLAY}
+        if [ "${MACHINE}" = "nvidia-orin-agx" ]; then
+            fdtoverlay -i ${basic_dtb} -o ${basic_dtb_basename}-bootable.dtb ${TEGRA_PLUGIN_MANAGER_OVERLAYS} ${BOOTABLE_OVERLAY}
+        elif [ "${MACHINE}" = "nvidia-orin-nano" ]; then
+            fdtoverlay -i ${basic_dtb_basename}-boot.dtb -o ${basic_dtb_basename}-bootable.dtb ${TEGRA_PLUGIN_MANAGER_OVERLAYS} ${BOOTABLE_OVERLAY}
+        fi
         cd -
     fi
 }

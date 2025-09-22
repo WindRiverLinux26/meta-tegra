@@ -52,4 +52,5 @@ EXTRA_PATCHES = "\
     file://0001-Fix-rcu-stall-when-CONFIG_SHADOW_CALL_STACK-enabled.patch;patchdir=nvdisplay \
     file://0001-drm-tegra-release-the-count-of-pid-to-avoid-memory-l.patch;patchdir=nvidia-oot \
     file://0001-nvdisplay-improve-coed-to-allow-nested-lock.patch;patchdir=nvdisplay \
+    file://0001-t23x-overlay-create-dts-for-booting-NVIDIA-Orin-Nano.patch;patchdir=hardware/nvidia/t23x/nv-public \
 "

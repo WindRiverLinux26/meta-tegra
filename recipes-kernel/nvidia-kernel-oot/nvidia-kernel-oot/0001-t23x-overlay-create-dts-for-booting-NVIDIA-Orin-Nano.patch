@@ -1,0 +1,290 @@
+From 1cd8dbc0171e53226ba9171c7c492570558c6f43 Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Fri, 19 Sep 2025 22:29:44 +0800
+Subject: [PATCH] t23x: overlay: create dts for booting NVIDIA Orin Nano
+ platform directly
+
+So far, NVIDIA Yocto SDK only supports for loading dtb from configuration
+table of uefi firmware. The reason as below:
+During deploying images onto board, the NVIDIA burn script concatenates
+that basic dtb and overlay dtbo files one by one at the end of uefi with
+4k bytes alignment. During booting system, uefi image gets the dtb and
+dtbo files, and then create a full feature dtb, and then modify some dts
+node based on specific board, and then register it into configuration
+table. When kernel boots up, the full feature dtb will be passed into
+kernel. Based on this kind of booting mode, it needs to spend on more
+than 20 minutes to burn the whole sysyem image even if user wants to
+update kernel image and dtb. It is very inconvinent and unacceptable to
+burn the whole system image during debugging kernel and dtb. Therefore,
+in order to solve this issue, create dts used to improve that it is able
+to be used to boot kernel directly.
+Because the Nano platform is the low performance one of Orin series,
+it needs to remove some nodes so that the final dtb is compatible with
+Nano platform. In order to discard the node dependence during removing
+dts nodes, add the '-f' parameter to generate dtb forcedly.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ nv-platform/Makefile                          |   3 +-
+ ...34-p3768-0000+p3767-0005-nv-super-boot.dts |  27 +++
+ overlay/Makefile                              |   1 +
+ ...-0000+p3767-0005-nv-super-boot-overlay.dts | 178 ++++++++++++++++++
+ 4 files changed, 208 insertions(+), 1 deletion(-)
+ create mode 100644 nv-platform/tegra234-p3768-0000+p3767-0005-nv-super-boot.dts
+ create mode 100644 overlay/tegra234-p3768-0000+p3767-0005-nv-super-boot-overlay.dts
+
+diff --git a/nv-platform/Makefile b/nv-platform/Makefile
+index b1f47dc..898e1f7 100644
+--- a/nv-platform/Makefile
++++ b/nv-platform/Makefile
+@@ -1,7 +1,7 @@
+ # SPDX-License-Identifier: GPL-2.0-only
+ # SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ 
+-DTC_FLAGS += -@
++DTC_FLAGS += -@ -f
+ 
+ old-dtb := $(dtb-y)
+ old-dtbo := $(dtbo-y)
+@@ -28,6 +28,7 @@ dtb-y += tegra234-p3768-0000+p3767-0004-nv.dtb
+ dtb-y += tegra234-p3768-0000+p3767-0004-nv-super.dtb
+ dtb-y += tegra234-p3768-0000+p3767-0005-nv.dtb
+ dtb-y += tegra234-p3768-0000+p3767-0005-nv-super.dtb
++dtb-y += tegra234-p3768-0000+p3767-0005-nv-super-boot.dtb
+ dtb-y += tegra234-p3971-0000+p3701-0000-nv.dtb
+ dtb-y += tegra234-p3971-0000+p3701-0008-nv.dtb
+ dtb-y += tegra234-p3971-0000+p3701-0008-nv-safety.dtb
+diff --git a/nv-platform/tegra234-p3768-0000+p3767-0005-nv-super-boot.dts b/nv-platform/tegra234-p3768-0000+p3767-0005-nv-super-boot.dts
+new file mode 100644
+index 0000000..aa2fb11
+--- /dev/null
++++ b/nv-platform/tegra234-p3768-0000+p3767-0005-nv-super-boot.dts
+@@ -0,0 +1,27 @@
++// SPDX-License-Identifier: GPL-2.0
++// SPDX-FileCopyrightText: SPDX-FileCopyrightText: Copyright (C) 2025 Wind River Systems Inc. All rights reserved.
++
++/dts-v1/;
++
++#include "tegra234-p3768-0000+p3767-0005-nv-super.dts"
++
++/ {
++
++};
++
++/delete-node/ &{/bus@0/spi@3270000};
++/delete-node/ &{/cpus/cpu-map/cluster1/core2};
++/delete-node/ &{/cpus/cpu-map/cluster1/core3};
++/delete-node/ &{/cpus/cpu-map/cluster2};
++/delete-node/ &{/cpus/cpu@10000};
++/delete-node/ &{/cpus/cpu@10100};
++/delete-node/ &{/cpus/cpu@20000};
++/delete-node/ &{/cpus/cpu@20100};
++/delete-node/ &{/cpus/cpu@20200};
++/delete-node/ &{/cpus/cpu@20300};
++/delete-node/ &{/cpus/l2-cache11};
++/delete-node/ &{/cpus/l2-cache20};
++/delete-node/ &{/cpus/l2-cache21};
++/delete-node/ &{/cpus/l2-cache22};
++/delete-node/ &{/cpus/l2-cache23};
++/delete-node/ &{/cpus/l3-cache2};
+diff --git a/overlay/Makefile b/overlay/Makefile
+index d5e9a0a..6d5fe98 100644
+--- a/overlay/Makefile
++++ b/overlay/Makefile
+@@ -20,6 +20,7 @@ dtbo-y += tegra234-p3737-0000+p3701-0000-as-p3767-0003.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-as-p3767-0004.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-dynamic.dtbo
+ dtbo-y += tegra234-p3768-0000+p3767-0000-dynamic.dtbo
++dtbo-y += tegra234-p3768-0000+p3767-0005-nv-super-boot-overlay.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-audio-adafruit-uda1334a.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-audio-adafruit-sph0645lm4h.dtbo
+ dtbo-y += tegra234-p3737-0000+p3701-0000-audio-fe-pi.dtbo
+diff --git a/overlay/tegra234-p3768-0000+p3767-0005-nv-super-boot-overlay.dts b/overlay/tegra234-p3768-0000+p3767-0005-nv-super-boot-overlay.dts
+new file mode 100644
+index 0000000..cad5a55
+--- /dev/null
++++ b/overlay/tegra234-p3768-0000+p3767-0005-nv-super-boot-overlay.dts
+@@ -0,0 +1,178 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// SPDX-FileCopyrightText: Copyright (C) 2025 Wind River Systems Inc. All rights reserved.
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/gpio/tegra234-gpio.h>
++#include <dt-bindings/interrupt-controller/irq.h>
++#include <dt-bindings/tegra234-p3767-0000-common.h>
++#include <dt-bindings/thermal/thermal.h>
++
++/ {
++	overlay-name = "Jetson Orin Nano Boot Directly";
++	jetson-header-name = "Jetson Orin Nano Boot Directly";
++	compatible = JETSON_COMPATIBLE;
++
++	fragment@0 {
++		target-path = "/";
++
++		__overlay__ {
++
++			bus@0 {
++
++				mmc@3400000 {
++					status = "okay";
++				};
++
++				pcie@140c0000 {
++					status = "disabled";
++				};
++
++				pcie@14100000 {
++					max-link-speed = <0x03>;
++				};
++
++				pcie@14160000 {
++					status = "okay";
++				};
++
++				pcie-ep@14160000 {
++					status = "disabled";
++				};
++
++				pcie@141e0000 {
++					num-lanes = <0x08>;
++					phys = <&p2u_gbe_0>, <&p2u_gbe_1>;
++					phy-names = "p2u-0", "p2u-1";
++				};
++			};
++
++			cpus {
++				cpu-map {
++					cluster1 {
++						core0 {
++							cpu = <&cpu1_2>;
++						};
++
++						core1 {
++							cpu = <&cpu1_3>;
++						};
++					};
++				};
++			};
++
++			thermal-zones {
++				cpu-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++
++				gpu-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++
++				cv0-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++
++				cv1-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++
++				cv2-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++
++				soc0-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++
++				soc1-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++
++				soc2-thermal {
++					cooling-maps {
++						map-cpufreq {
++							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT &cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++						};
++					};
++				};
++			};
++
++			chosen {
++				odm-data {
++					hsio-uphy-config-0;
++					hsstp-lane-map-3;
++					gbe-uphy-config-8;
++				};
++			};
++
++			firmware {
++				optee {
++					status = "okay";
++				};
++
++				uefi {
++					firmware-media-overlays-applied;
++				};
++			};
++
++			reserved-memory {
++				pva-carveout {
++					nomap;
++					status = "okay";
++					reg = <0x02 0x73180000 0x00 0x280000>;
++					compatible = "nvidia,pva-carveout";
++				};
++
++				ramoops_carveout {
++					status = "okay";
++					reg = <0x02 0x725f0000 0x00 0x200000>;
++				};
++
++				fsi-carveout {
++					status = "disabled";
++				};
++
++				vpr-carveout {
++					status = "disabled";
++				};
++			};
++
++			aliases {
++				serial0 = "/serial";
++				serial1 = "/bus@0/serial@3100000";
++				serial2 = "/bus@0/serial@3140000";
++			};
++		};
++	};
++};
+-- 
+2.34.1
+
