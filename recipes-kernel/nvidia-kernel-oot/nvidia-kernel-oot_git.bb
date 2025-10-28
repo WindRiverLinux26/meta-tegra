@@ -55,4 +55,5 @@ EXTRA_PATCHES = "\
     file://0001-t23x-overlay-create-dts-for-booting-NVIDIA-Orin-Nano.patch;patchdir=hardware/nvidia/t23x/nv-public \
     file://0001-usb-typec-remove-IRQF_ONESHOT-flag.patch;patchdir=nvidia-oot \
     file://0001-host1x-fence-call-fput-to-avoid-memory-leak.patch;patchdir=nvidia-oot \
+    file://0001-drivers-capture-common-only-create-memory-cache-at-t.patch;patchdir=nvidia-oot \
 "
