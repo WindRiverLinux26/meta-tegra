@@ -119,6 +119,8 @@ do_install() {
         install -m 0755 "$f" ${D}${bindir}/cuda-samples
     done
     install -m 0644 ${S}/Samples/0_Introduction/c++11_cuda/warandpeace.txt ${D}${bindir}/cuda-samples/data
+    install -m 0644 ${S}/Common/data/teapot512.pgm ${D}${bindir}/cuda-samples/data
+    install -m 0644 ${S}/Samples/0_Introduction/simpleTextureDrv/data/ref_rotated.pgm ${D}${bindir}/cuda-samples/data
 }
 
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
