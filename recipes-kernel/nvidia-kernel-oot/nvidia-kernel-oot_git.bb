@@ -58,4 +58,5 @@ EXTRA_PATCHES = "\
     file://0001-drivers-capture-common-only-create-memory-cache-at-t.patch;patchdir=nvidia-oot \
     file://0001-usb-typec-release-resource-when-removing-usb-driver-.patch;patchdir=nvidia-oot \
     file://0001-nvdisplay-nv-platform-call-platform_device_put-to-de.patch;patchdir=nvdisplay \
+    file://0001-nvidia-modeset-dp-decrease-reference-if-destroy-func.patch;patchdir=nvdisplay \
 "
