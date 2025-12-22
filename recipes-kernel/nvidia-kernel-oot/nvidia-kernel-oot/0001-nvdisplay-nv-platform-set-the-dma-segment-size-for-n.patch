@@ -1,0 +1,44 @@
+From d28c1e485e1a59a1da7c61d070679b48804fa981 Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Mon, 22 Dec 2025 11:22:46 +0800
+Subject: [PATCH] nvdisplay: nv-platform: set the dma segment size for nvidia
+ display device
+
+If kernel config CONFIG_DMA_API_DEBUG is enabled, there is below
+warning trace reported during kernel boots up:
+DMA-API: platform 13800000.display:nvdisplay-niso: mapping sg
+segment longer than device claims to support [len=77824] [max=65536]
+WARNING: CPU: 0 PID: 5142 at /kernel/dma/debug.c:1185
+Call trace:
+check_sg_segment+0x190/0x200
+debug_dma_map_sg+0x13c/0x1b0
+......
+nvkms_open_gpu+0x68/0xc0 [nvidia_modeset]
+nvRmAllocDeviceEvo+0x654/0x840 [nvidia_modeset]
+nvidia_frontend_unlocked_ioctl+0x4c/0x70 [nvidia]
+Because the kernel default 'max_seg_size' is 64K, and the mapping sg
+segment longer it. In order to avoid this issue, set the dma segment
+size as UINT_MAX.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ kernel-open/nvidia/nv-platform.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/kernel-open/nvidia/nv-platform.c b/kernel-open/nvidia/nv-platform.c
+index 16c1afb..143ce9d 100644
+--- a/kernel-open/nvidia/nv-platform.c
++++ b/kernel-open/nvidia/nv-platform.c
+@@ -707,6 +707,7 @@ static int nv_platform_device_display_probe(struct platform_device *plat_dev)
+     nvl->dma_dev.addressable_range.start = 0;
+     nvl->dma_dev.addressable_range.limit = NV_U64_MAX;
+     nv->dma_dev = &nvl->dma_dev;
++    dma_set_max_seg_size(nvl->dev, UINT_MAX);
+ 
+     nvl->tce_bypass_enabled = NV_TRUE;
+ 
+-- 
+2.34.1
+
