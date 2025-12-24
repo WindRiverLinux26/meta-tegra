@@ -61,4 +61,5 @@ EXTRA_PATCHES = "\
     file://0001-nvidia-modeset-dp-decrease-reference-if-destroy-func.patch;patchdir=nvdisplay \
     file://0001-nvdisplay-nv-platform-set-the-dma-segment-size-for-n.patch;patchdir=nvdisplay \
     file://0001-drivers-devfreq-call-devfreq_get_freq_range-in-locke.patch;patchdir=nvidia-oot \
+    file://0001-drivers-devfreq-avoid-deadlock-issue-when-calling-de.patch;patchdir=nvidia-oot \
 "
