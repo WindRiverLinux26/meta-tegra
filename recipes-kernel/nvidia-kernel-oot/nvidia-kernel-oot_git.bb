@@ -64,4 +64,6 @@ EXTRA_PATCHES = "\
     file://0001-drivers-devfreq-avoid-deadlock-issue-when-calling-de.patch;patchdir=nvidia-oot \
     file://0001-drivers-nvethernet-speed-10-is-not-supported-while-a.patch;patchdir=nvidia-oot \
     file://0001-nvdisplay-replace-lock-sync-with-wait-event-mechanis.patch;patchdir=nvdisplay \
+    file://0001-nvgpu-dma-use-unlocked-variant-function-to-process-d.patch;patchdir=nvgpu \
+    file://0001-nvdisplay-dma-use-unlocked-variant-function-when-map.patch;patchdir=nvdisplay \
 "
