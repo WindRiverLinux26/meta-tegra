@@ -35,7 +35,6 @@ SRCREV_FORMAT = "nvidia-oot_nvethernetrm_nvdisplay_hwpm_nvgpu_t23x-dts_tegra-dts
 inherit l4t_bsp
 
 PV = "${L4T_VERSION}+git"
-DEFAULT_PREFERENCE = "-1"
 
 add_nvethernetrm_symlink() {
     ln -snf ../../../../../../nvethernetrm ${S}/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm
