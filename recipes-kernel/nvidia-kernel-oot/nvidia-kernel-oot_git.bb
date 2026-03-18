@@ -17,6 +17,7 @@ SRC_URI = " \
     git://${SRC_REPO_T23X_DTS};branch=${SRCBRANCH};name=t23x-dts;destsuffix=${BPN}-${PV}/hardware/nvidia/t23x/nv-public \
     git://${SRC_REPO_TEGRA_DTS};branch=${SRCBRANCH};name=tegra-dts;destsuffix=${BPN}-${PV}/hardware/nvidia/tegra/nv-public \
     git://${SRC_REPO_KERNEL_DTS};branch=${SRCBRANCH};name=kernel-devicetree;destsuffix=${BPN}-${PV}/kernel-devicetree \
+    file://Makefile \
 "
 
 SRCBRANCH = "l4t/l4t-r36.5"
@@ -35,6 +36,11 @@ SRCREV_FORMAT = "nvidia-oot_nvethernetrm_nvdisplay_hwpm_nvgpu_t23x-dts_tegra-dts
 inherit l4t_bsp
 
 PV = "${L4T_VERSION}+git"
+
+install_makefile() {
+    cp ${UNPACKDIR}/Makefile ${S}/
+}
+do_unpack[postfuncs] += "install_makefile"
 
 add_nvethernetrm_symlink() {
     ln -snf ../../../../../../nvethernetrm ${S}/nvidia-oot/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm

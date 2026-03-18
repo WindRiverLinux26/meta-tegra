@@ -82,13 +82,6 @@ EXTRA_PATCHES ??= ""
 
 SRC_URI += "${COMMON_PATCHES} ${EXTRA_PATCHES}"
 
-do_unpack[depends] += "tegra-kernel-makefile:do_populate_sysroot"
-
-unpack_makefile_from_bsp() {
-    [ -e ${S}/Makefile ] || cp ${STAGING_DATADIR}/nvidia-kernel/Makefile ${S}/
-}
-do_unpack[postfuncs] += "unpack_makefile_from_bsp"
-
 KERNEL_MODULE_PACKAGE_PREFIX = "nv-"
 
 # Out-of-tree drivers that are named identically to, and
