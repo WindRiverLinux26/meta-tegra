@@ -71,4 +71,5 @@ EXTRA_PATCHES = "\
     file://0001-nvdisplay-replace-lock-sync-with-wait-event-mechanis.patch;patchdir=nvdisplay \
     file://0001-nvgpu-dma-use-unlocked-variant-function-to-process-d.patch;patchdir=nvgpu \
     file://0001-nvdisplay-dma-use-unlocked-variant-function-when-map.patch;patchdir=nvdisplay \
+    file://0001-gpu-nvgpu-probe-clock-availability-during-acquisitio.patch;patchdir=nvgpu \
 "
