@@ -77,4 +77,6 @@ EXTRA_PATCHES = "\
     file://0003-video-tegra-pva-use-DMA-IOVA-API-for-contiguous-sync.patch;patchdir=nvidia-oot \
     file://0004-video-tegra-pva-add-missing-nvhost-syncpt-interface-.patch;patchdir=nvidia-oot \
     file://0001-video-tegra-nvcsi-fix-resource-leak-on-module-unload.patch;patchdir=nvidia-oot \
+    file://0001-video-tegra-isp5-fix-use-after-free-on-module-unload.patch;patchdir=nvidia-oot \
+    file://0002-video-tegra-isp5-fix-resource-leak-on-module-unload.patch;patchdir=nvidia-oot \
 "
