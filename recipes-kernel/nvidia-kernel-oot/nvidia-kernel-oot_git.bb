@@ -79,4 +79,5 @@ EXTRA_PATCHES = "\
     file://0001-video-tegra-nvcsi-fix-resource-leak-on-module-unload.patch;patchdir=nvidia-oot \
     file://0001-video-tegra-isp5-fix-use-after-free-on-module-unload.patch;patchdir=nvidia-oot \
     file://0002-video-tegra-isp5-fix-resource-leak-on-module-unload.patch;patchdir=nvidia-oot \
+    file://0001-video-tegra-vi5-fix-resource-leak-on-module-unload.patch;patchdir=nvidia-oot \
 "
