@@ -80,4 +80,7 @@ EXTRA_PATCHES = "\
     file://0001-video-tegra-isp5-fix-use-after-free-on-module-unload.patch;patchdir=nvidia-oot \
     file://0002-video-tegra-isp5-fix-resource-leak-on-module-unload.patch;patchdir=nvidia-oot \
     file://0001-video-tegra-vi5-fix-resource-leak-on-module-unload.patch;patchdir=nvidia-oot \
+    file://0001-media-tegra-capture-vi-fix-use-after-free-on-module-.patch;patchdir=nvidia-oot \
+    file://0002-media-tegra-vi-fix-NULL-pointer-dereference-in-chann.patch;patchdir=nvidia-oot \
+    file://0003-video-tegra-camera_platform-fix-debugfs-leak-on-modu.patch;patchdir=nvidia-oot \
 "
