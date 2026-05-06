@@ -1,0 +1,44 @@
+From f0e5984711247e1272c8c46745b633469a5f182f Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Wed, 6 May 2026 23:17:36 +0800
+Subject: [PATCH] BaseTools: EfiRom: fix discarded-qualifiers error with gcc 15
+
+With glibc 2.43 and C23 const-generic strstr(), passing a const char*
+haystack causes strstr() to return const char*. Assigning this to the
+non-const Ptr0 triggers -Werror=discarded-qualifiers.
+
+Since Ptr0 is only used for a NULL check, remove the assignment and
+check strstr() return value directly. Remove the now-unused Ptr0
+variable declaration.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ BaseTools/Source/C/EfiRom/EfiRom.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/BaseTools/Source/C/EfiRom/EfiRom.c b/BaseTools/Source/C/EfiRom/EfiRom.c
+index fa7bf0e..6e903b3 100644
+--- a/BaseTools/Source/C/EfiRom/EfiRom.c
++++ b/BaseTools/Source/C/EfiRom/EfiRom.c
+@@ -44,7 +44,6 @@ Returns:
+   FILE_LIST *FList;
+   UINT32    TotalSize;
+   UINT32    Size;
+-  CHAR8     *Ptr0;
+ 
+   SetUtilityName(UTILITY_NAME);
+ 
+@@ -75,7 +74,7 @@ Returns:
+   //
+   if (mOptions.DumpOption == 1) {
+     if (mOptions.FileList != NULL) {
+-      if ((Ptr0 = strstr ((CONST CHAR8 *) mOptions.FileList->FileName, DEFAULT_OUTPUT_EXTENSION)) != NULL) {
++      if (strstr ((CONST CHAR8 *) mOptions.FileList->FileName, DEFAULT_OUTPUT_EXTENSION) != NULL) {
+         DumpImage (mOptions.FileList);
+         goto BailOut;
+       } else {
+-- 
+2.34.1
+
