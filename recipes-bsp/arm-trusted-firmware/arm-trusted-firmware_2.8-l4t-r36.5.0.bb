@@ -10,6 +10,13 @@ require recipes-bsp/tegra-sources/tegra-sources-36.5.0.inc
 
 SRC_URI += "file://0001-workaround-to-fix-ld.bfd-warning-binutils-version-2..patch"
 
+CVE_2022_47630_FIX = "file://0001-fix-auth-forbid-junk-after-extensions.patch \
+        file://0002-fix-auth-require-at-least-one-extension-to-be-presen.patch \
+        file://0003-fix-auth-properly-validate-X.509-extensions.patch \
+        file://0004-fix-auth-avoid-out-of-bounds-read-in-auth_nvctr.patch \
+"
+SRC_URI:append = " ${CVE_2022_47630_FIX}"
+
 INHIBIT_DEFAULT_DEPS = "1"
 DEPENDS:append = " virtual/cross-cc"
 
