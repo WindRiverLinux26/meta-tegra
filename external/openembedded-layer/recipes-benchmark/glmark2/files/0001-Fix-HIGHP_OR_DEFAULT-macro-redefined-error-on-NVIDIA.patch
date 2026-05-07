@@ -1,0 +1,108 @@
+From dcf30cb74c03d9d54361cfef0ce54c15ff3f88a0 Mon Sep 17 00:00:00 2001
+From: Ming Li <ming.li@windriver.com>
+Date: Thu, 7 May 2026 14:50:00 +0800
+Subject: [PATCH] Fix HIGHP_OR_DEFAULT macro redefined error on NVIDIA
+
+ShaderSource::str() prepends HIGHP_OR_DEFAULT and MEDIUMP_OR_DEFAULT
+macro definitions to every shader source. When scene-conditionals,
+scene-function, and scene-loop compose shaders by inserting
+source_main.str() into the outer source template, the macros get
+defined twice in the final shader - once from source_main.str() and
+once from the outer source.str(). NVIDIA's GLSL compiler (unlike
+others) strictly rejects this as error C7101.
+
+Fix by adding raw_str() to ShaderSource that returns the raw source
+without precision/macro prefix, and using it for intermediate shader
+fragments that will be composed into a larger shader.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ src/libmatrix/shader-source.h | 1 +
+ src/scene-conditionals.cpp    | 4 ++--
+ src/scene-function.cpp        | 4 ++--
+ src/scene-loop.cpp            | 4 ++--
+ 4 files changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/src/libmatrix/shader-source.h b/src/libmatrix/shader-source.h
+index 4dc1d1d..7e10d04 100644
+--- a/src/libmatrix/shader-source.h
++++ b/src/libmatrix/shader-source.h
+@@ -60,6 +60,7 @@ public:
+ 
+     ShaderType type();
+     std::string str();
++    std::string raw_str() { return source_.str(); }
+ 
+     enum PrecisionValue {
+         PrecisionValueLow,
+diff --git a/src/scene-conditionals.cpp b/src/scene-conditionals.cpp
+index c309d70..3c5d1b5 100644
+--- a/src/scene-conditionals.cpp
++++ b/src/scene-conditionals.cpp
+@@ -67,7 +67,7 @@ get_vertex_shader_source(int steps, bool conditionals)
+             source_main.append_file(Options::data_path + step_simple_file);
+     }
+ 
+-    source.replace("$MAIN$", source_main.str());
++    source.replace("$MAIN$", source_main.raw_str());
+ 
+     return source.str();
+ }
+@@ -85,7 +85,7 @@ get_fragment_shader_source(int steps, bool conditionals)
+             source_main.append_file(Options::data_path + step_simple_file);
+     }
+ 
+-    source.replace("$MAIN$", source_main.str());
++    source.replace("$MAIN$", source_main.raw_str());
+ 
+     return source.str();
+ }
+diff --git a/src/scene-function.cpp b/src/scene-function.cpp
+index 77d2b5f..b1bf373 100644
+--- a/src/scene-function.cpp
++++ b/src/scene-function.cpp
+@@ -83,7 +83,7 @@ get_vertex_shader_source(int steps, bool function, std::string &complexity)
+     else
+         source.replace("$PROCESS$", "");
+ 
+-    source.replace("$MAIN$", source_main.str());
++    source.replace("$MAIN$", source_main.raw_str());
+ 
+     return source.str();
+ }
+@@ -112,7 +112,7 @@ get_fragment_shader_source(int steps, bool function, std::string &complexity)
+     else
+         source.replace("$PROCESS$", "");
+ 
+-    source.replace("$MAIN$", source_main.str());
++    source.replace("$MAIN$", source_main.raw_str());
+ 
+     return source.str();
+ }
+diff --git a/src/scene-loop.cpp b/src/scene-loop.cpp
+index 3ce273a..f17cc81 100644
+--- a/src/scene-loop.cpp
++++ b/src/scene-loop.cpp
+@@ -80,7 +80,7 @@ get_fragment_shader_source(int steps, bool loop, bool uniform)
+             source_main.append_file(Options::data_path + step_simple_file);
+     }
+ 
+-    source.replace("$MAIN$", source_main.str());
++    source.replace("$MAIN$", source_main.raw_str());
+ 
+     return source.str();
+ }
+@@ -105,7 +105,7 @@ get_vertex_shader_source(int steps, bool loop, bool uniform)
+             source_main.append_file(Options::data_path + step_simple_file);
+     }
+ 
+-    source.replace("$MAIN$", source_main.str());
++    source.replace("$MAIN$", source_main.raw_str());
+ 
+     return source.str();
+ }
+-- 
+2.34.1
+
