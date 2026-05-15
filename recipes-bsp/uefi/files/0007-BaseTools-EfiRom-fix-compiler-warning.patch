@@ -1,25 +1,27 @@
-From f0e5984711247e1272c8c46745b633469a5f182f Mon Sep 17 00:00:00 2001
-From: Meng Li <Meng.Li@windriver.com>
-Date: Wed, 6 May 2026 23:17:36 +0800
-Subject: [PATCH] BaseTools: EfiRom: fix discarded-qualifiers error with gcc 15
+From 9af06ef3cbb052b142f9660c2c01e7aeb401300c Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Mon, 8 Dec 2025 10:28:50 +0100
+Subject: [PATCH] BaseTools/EfiRom: fix compiler warning
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
-With glibc 2.43 and C23 const-generic strstr(), passing a const char*
-haystack causes strstr() to return const char*. Assigning this to the
-non-const Ptr0 triggers -Werror=discarded-qualifiers.
+New warning after updating gcc:
 
-Since Ptr0 is only used for a NULL check, remove the assignment and
-check strstr() return value directly. Remove the now-unused Ptr0
-variable declaration.
+EfiRom.c: In function ‘main’:
+EfiRom.c:78:17: error: assignment discards ‘const’ qualifier from pointer target type [-Werror=discarded-qualifiers]
 
-Upstream-Status: Pending
+The assigned value is not used, so fix the warning by just removing it.
 
-Signed-off-by: Meng Li <Meng.Li@windriver.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream-Status: Backport [6e903b3504]
+Signed-off-by: Matt Madison <matt@madison.systems>
 ---
  BaseTools/Source/C/EfiRom/EfiRom.c | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/BaseTools/Source/C/EfiRom/EfiRom.c b/BaseTools/Source/C/EfiRom/EfiRom.c
-index fa7bf0e..6e903b3 100644
+index fa7bf0e62e..6e903b3504 100644
 --- a/BaseTools/Source/C/EfiRom/EfiRom.c
 +++ b/BaseTools/Source/C/EfiRom/EfiRom.c
 @@ -44,7 +44,6 @@ Returns:
@@ -40,5 +42,5 @@ index fa7bf0e..6e903b3 100644
          goto BailOut;
        } else {
 -- 
-2.34.1
+2.43.0
 

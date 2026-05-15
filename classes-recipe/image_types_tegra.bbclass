@@ -4,7 +4,7 @@ TEGRA_UEFI_SIGNING_CLASS ??= "tegra-uefi-signing"
 inherit ${TEGRA_UEFI_SIGNING_CLASS}
 TEGRA_UEFI_USE_SIGNED_FILES ??= "false"
 
-IMAGE_TYPES += "tegraflash.tar"
+IMAGE_TYPES += "tegraflash-tar"
 
 IMAGE_ROOTFS_ALIGNMENT ?= "4"
 
@@ -67,7 +67,9 @@ IMAGE_ROOTFS_SIZE ?= "${@tegra_default_rootfs_size(d)}"
 
 KERNEL_ARGS ??= ""
 TEGRA_SIGNING_PKC ??= ""
+TEGRA_SIGNING_PKC[vardepvalue] = ""
 TEGRA_SIGNING_SBK ??= ""
+TEGRA_SIGNING_SBK[vardepvalue] = ""
 TEGRA_SIGNING_ARGS ??= "${@tegra_signing_args(d)}"
 TEGRA_SIGNING_FILECHECKSUMS ??= "${@tegra_signing_filechecksums(d)}"
 TEGRA_SIGNING_ENV ??= ""
@@ -195,8 +197,8 @@ tegraflash_custom_post() {
 }
 
 tegraflash_finalize_pkg() {
-    rm -f ${IMGDEPLOYDIR}/${IMAGE_NAME}.tegraflash.tar
-    ${IMAGE_CMD_TAR} --sparse --numeric-owner --transform="s,^\./,," -cf ${IMGDEPLOYDIR}/${IMAGE_NAME}.tegraflash.tar .
+    rm -f ${IMGDEPLOYDIR}/${IMAGE_NAME}.tegraflash-tar
+    ${IMAGE_CMD_TAR} --sparse --numeric-owner --transform="s,^\./,," -cf ${IMGDEPLOYDIR}/${IMAGE_NAME}.tegraflash-tar .
 }
 
 tegraflash_create_flash_config() {
@@ -455,7 +457,7 @@ EOF
     chmod +x $outfile
 }
 
-IMAGE_CMD:tegraflash.tar = "create_tegraflash_pkg"
+IMAGE_CMD:tegraflash-tar = "create_tegraflash_pkg"
 do_image_tegraflash_tar[depends] += "dtc-native:do_populate_sysroot coreutils-native:do_populate_sysroot \
                                  tegra-flashtools-native:do_populate_sysroot gptfdisk-native:do_populate_sysroot \
                                  tegra-bootfiles:do_populate_sysroot tegra-bootfiles:do_populate_lic \
@@ -465,4 +467,4 @@ do_image_tegraflash_tar[depends] += "dtc-native:do_populate_sysroot coreutils-na
                                  virtual/bootloader:do_deploy virtual/secure-os:do_deploy \
 				 ${TEGRA_RCM_EDK2_DEPENDS} ${TEGRA_SIGNING_EXTRA_DEPS} ${DTB_EXTRA_DEPS} \
                                  ${@'${TEGRAFLASH_INITRD_FLASH_IMAGE}:do_image_complete' if d.getVar('TEGRAFLASH_INITRD_FLASH_IMAGE') != '' else ''}"
-IMAGE_TYPEDEP:tegraflash.tar += "${IMAGE_TEGRAFLASH_FS_TYPE}"
+IMAGE_TYPEDEP:tegraflash-tar += "${IMAGE_TEGRAFLASH_FS_TYPE}"
