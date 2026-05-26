@@ -37,6 +37,7 @@ EXTRA_OEMAKE = "\
     platform-aflags-generic='${DEBUG_PREFIX_MAP} -pipe' \
     TA_DEV_KIT_DIR=${TA_DEV_KIT_DIR} \
     CFG_WITH_STMM_SP=y CFG_STMM_PATH=${@oe.path.relative(d.getVar('S'),d.getVar('B'))}/standalone_mm_optee.bin \
+    CFG_HWRNG_PTA=y CFG_HWRNG_QUALITY=1024 \
 "
 
 do_compile:prepend() {
