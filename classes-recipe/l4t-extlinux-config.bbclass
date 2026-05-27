@@ -121,7 +121,7 @@ python do_create_extlinux_config() {
                 overlay_paths = ",".join([ localdata.getVar('L4T_EXTLINUX_BASEDIR') + "/" + overlay for overlay in overlays.split(" ") ])
                 overlays = '\tOVERLAYS ' + overlay_paths + '\n'
         elif overlays:
-            bb.fatal('UBOOT_EXTLINUX_FDTOVERLAYS set to % when UBOOT_EXTLINUX_FDT is not set.  This is not a supported config' % overlays)
+            bb.fatal('UBOOT_EXTLINUX_FDTOVERLAYS set to %s when UBOOT_EXTLINUX_FDT is not set.  This is not a supported config' % overlays)
 
         cfg += 'LABEL %s\n\tMENU LABEL %s\n\tLINUX %s\n%s%s' % (label, menu_description, kernel_image, fdt, overlays)
 
