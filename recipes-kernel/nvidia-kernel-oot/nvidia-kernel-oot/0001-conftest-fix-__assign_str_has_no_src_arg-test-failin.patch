@@ -1,0 +1,54 @@
+From 4ed75728b837cb2da6470c7892c31631f73e6d6d Mon Sep 17 00:00:00 2001
+From: Meng Li <Meng.Li@windriver.com>
+Date: Fri, 5 Jun 2026 15:26:00 +0800
+Subject: [PATCH] conftest: fix __assign_str_has_no_src_arg test failing due to
+ path macros
+
+When TRACE_INCLUDE_PATH is set to ${PWD}, any C keywords or predefined
+macros (e.g. "auto", "linux", "unix", "inline", "fallthrough") that
+appear in the build path are expanded during stringification, corrupting
+the path and causing the conftest to always fail.
+This results in NV___ASSIGN_STR_HAS_NO_SRC_ARG never being defined,
+which causes the NVIDIA OOT kernel modules to use the old two-argument
+__assign_str(dst, src) form. On kernels >= 6.10 where __assign_str
+takes only one argument, this leads to build failures.
+Fix by changing TRACE_INCLUDE_PATH from ${PWD} to "." (relative path)
+and temporarily adding -I$PWD to CFLAGS so the compiler can resolve
+the relative include. This avoids stringification of the absolute path
+entirely while still allowing define_trace.h to find the conftest
+header.
+
+Upstream-Status: Pending
+
+Signed-off-by: Meng Li <Meng.Li@windriver.com>
+---
+ scripts/conftest/conftest.sh | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/conftest/conftest.sh b/scripts/conftest/conftest.sh
+index 65f47be..fa0e478 100755
+--- a/scripts/conftest/conftest.sh
++++ b/scripts/conftest/conftest.sh
+@@ -6471,7 +6471,7 @@ compile_test() {
+             #
+             echo "
+             #define TRACE_INCLUDE_FILE conftest$$
+-            #define TRACE_INCLUDE_PATH ${PWD}
++            #define TRACE_INCLUDE_PATH .
+ 
+             #include <linux/types.h>
+             #include <linux/tracepoint.h>
+@@ -6494,7 +6494,10 @@ compile_test() {
+             #include \"conftest$$.h\"
+             "
+ 
++            CFLAGS_SAVE="$CFLAGS"
++            CFLAGS="$CFLAGS -I$PWD"
+             compile_check_conftest "$CODE" "NV___ASSIGN_STR_HAS_NO_SRC_ARG" "" "types"
++            CFLAGS="$CFLAGS_SAVE"
+             rm conftest$$.h
+         ;;
+ 
+-- 
+2.34.1
+

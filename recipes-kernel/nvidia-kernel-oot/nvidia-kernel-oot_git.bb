@@ -86,4 +86,5 @@ EXTRA_PATCHES = "\
     file://0001-media-tegra-vi-fix-memory-leak-in-media-v4l2-cleanup.patch;patchdir=nvidia-oot \
     file://0001-video-tegra-capture-support-fix-resource-leak-on-mod.patch;patchdir=nvidia-oot \
     file://0001-net-can-mttcan-fix-use-after-free-issue-of-skb.patch;patchdir=nvidia-oot \
+    file://0001-conftest-fix-__assign_str_has_no_src_arg-test-failin.patch;patchdir=nvidia-oot \
 "

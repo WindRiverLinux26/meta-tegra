@@ -30,7 +30,6 @@ COMMON_PATCHES = "\
     file://0014-nvdisplay-nvidia-drm-remove-unused-date-member.patch;patchdir=nvdisplay \
     file://0015-nvdisplay-nvidia-drm-add-constify-attribute-for-stru.patch;patchdir=nvdisplay \
     file://0016-tegra-virt-alt-Remove-leading-from-include-path-from.patch;patchdir=nvidia-oot \
-    file://0017-conftest-work-around-stringify-issue-with-__assign_s.patch;patchdir=nvidia-oot \
     file://0018-gpio-Use-conftest-to-find-if-struct-gpio_chip-has-of.patch;patchdir=nvidia-oot \
     file://0019-drivers-Fix-gpio_chip-.set-callback-for-v6.17.patch;patchdir=nvidia-oot \
     file://0020-r8126-use-conftest-for-hrtimer_init.patch;patchdir=nvidia-oot \
