@@ -3,7 +3,7 @@
 SOC_FAMILY = "tegra234"
 
 require conf/machine/include/soc-family.inc
-DEFAULTTUNE ?= "armv8a-crc"
+DEFAULTTUNE ?= "aarch64"
 require conf/machine/include/arm/arch-armv8-2a.inc
 
 SERIAL_CONSOLES ?= "115200;ttyTCU0"
@@ -22,7 +22,7 @@ TEGRA_CUDA_ARCHITECTURE ?= "87"
 require conf/machine/include/tegra-common.inc
 
 L4T_BSP_PREFIX = "Jetson"
-L4T_DEB_SOCNAME = "t234"
+L4T_DEB_SOCNAME = "som"
 
 NVPMODEL ?= "nvpmodel_p3701_0000"
 NVPOWER ?= "jetsonpower_t234"
@@ -37,9 +37,6 @@ TEGRA_BOOT_FIRMWARE_FILES = "\
     mb1_t234_prod.bin \
     mb2_t234.bin \
     mb2rf_t234.bin \
-    preboot_c10_prod_cr.bin \
-    mce_c10_prod_cr.bin \
-    mts_c10_prod_cr.bin \
     spe_t234.bin \
     psc_bl1_t234_prod.bin \
     pscfw_t234_prod.bin \
@@ -59,3 +56,5 @@ TEGRA_BOOT_FIRMWARE_FILES = "\
 "
 
 TEGRA_EDK2_PLATFORM = "t23x"
+IMAGE_TEGRAFLASH_FS_TYPE = "ext4"
+MACHINE_EXTRA_RDEPENDS += "nvidia-kernel-oot-compute-nvgpu"

@@ -15,13 +15,10 @@ TEGRA_BUPGEN_SPECS ?= "fab=000;boardsku=0005;boardrev=;chipsku=00:00:00:D5;bup_t
 
 KERNEL_DEVICETREE ?= "tegra234-p3768-0000+p3767-0005-nv-super.dtb"
 KERNEL_ARGS ?= "mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 video=efifb:off console=tty0 efi=runtime nvme.use_threaded_interrupts=1 pci=pcie_bus_perf"
-MACHINE_EXTRA_RRECOMMENDS += "kernel-module-r8168 kernel-module-r8169 kernel-module-realtek"
-MACHINE_EXTRA_RDEPENDS += "linux-firmware-rtl8168"
 
-BOOTPART_SIZE ?= "8388608"
 ROOTFSPART_SIZE_DEFAULT ?= "30064771072"
-ODMDATA ?= "gbe-uphy-config-8,hsstp-lane-map-3,hsio-uphy-config-0"
-EMMC_BCT ?= "tegra234-p3767-0001-sdram-l4t.dts"
+TEGRA_FLASHVAR_ODMDATA ?= "gbe-uphy-config-8,hsstp-lane-map-3,hsio-uphy-config-0"
+EMC_BCT ?= "tegra234-p3767-0001-sdram-l4t.dts"
 TEGRA_AUDIO_DEVICE ?= "tegra-hda-p3767-p3509"
 
 OTABOOTDEV ?= "/dev/mtdblock0"

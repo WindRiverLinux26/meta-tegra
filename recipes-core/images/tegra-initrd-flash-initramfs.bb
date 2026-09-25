@@ -7,12 +7,27 @@ TEGRA_INITRD_FLASH_BASEUTILS ?= "busybox"
 
 PACKAGE_INSTALL = "\
     tegra-firmware-xusb \
-    tegra-flash-init \
     ${TEGRA_INITRD_FLASH_BASEUTILS} \
     ${ROOTFS_BOOTSTRAP_INSTALL} \
     ${TEGRA_INITRD_FLASH_INSTALL} \
     ${MACHINE_ESSENTIAL_EXTRA_RDEPENDS} \
     ${MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS} \
+    kernel-module-dummy \
+    kernel-module-uas \
+    kernel-module-tegra-bpmp-thermal \
+    kernel-module-pwm-tegra \
+    kernel-module-pwm-fan \
+"
+
+# Thor (T264): unified flash via ADB
+PACKAGE_INSTALL:append:tegra264 = " \
+    tegra-target-flash-scripts \
+    nv-kernel-module-ufs-tegra \
+"
+
+# Orin (T234): initrd flash via USB mass storage
+PACKAGE_INSTALL:append:tegra234 = " \
+    tegra-flash-init \
 "
 
 IMAGE_FEATURES = ""

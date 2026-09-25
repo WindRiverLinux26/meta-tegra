@@ -1,0 +1,134 @@
+From 019aed5e1bd57ec242b9d63e4a473e2a56460330 Mon Sep 17 00:00:00 2001
+From: Ilies CHERGUI <ichergui@nvidia.com>
+Date: Thu, 19 Mar 2026 17:25:51 -0700
+Subject: [PATCH] Avoid compile issues with libc math functions
+
+error: '::isnan' has not been declared; did you mean 'std::isnan'? [-Wtemplate-body]
+   43 |     return ::isnan(__x);
+      |              ^~~~~
+      |              std::isnan
+
+Those libc functions might not be available or defined as macros.
+We can work around this issue by just dropping the global qualification `::`
+
+This will work for macros and functions alike.
+
+Upstream-Status: Inappropriate [OE-specific]
+Signed-off-by: Michael Schellenberger Costa <miscco@nvidia.com>
+Signed-off-by: Ilies CHERGUI <ichergui@nvidia.com>
+---
+ .../sbsa-linux/include/cccl/cuda/std/__cmath/fpclassify.h   | 6 +++---
+ .../sbsa-linux/include/cccl/cuda/std/__cmath/isfinite.h     | 6 +++---
+ .../sbsa-linux/include/cccl/cuda/std/__cmath/isinf.h        | 6 +++---
+ .../sbsa-linux/include/cccl/cuda/std/__cmath/isnan.h        | 2 +-
+ 4 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/fpclassify.h b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/fpclassify.h
+index a221d2f..a807f1d 100644
+--- a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/fpclassify.h
++++ b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/fpclassify.h
+@@ -126,7 +126,7 @@ template <class _Tp>
+ #else // ^^^ _CCCL_BUILTIN_FPCLASSIFY ^^^ / vvv !_CCCL_BUILTIN_FPCLASSIFY vvv
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    NV_IF_TARGET(NV_IS_HOST, (return ::fpclassify(__x);))
++    NV_IF_TARGET(NV_IS_HOST, (return fpclassify(__x);))
+   }
+   return ::cuda::std::__fpclassify_impl(__x);
+ #endif // !_CCCL_BUILTIN_FPCLASSIFY
+@@ -139,7 +139,7 @@ template <class _Tp>
+ #else // ^^^ _CCCL_BUILTIN_FPCLASSIFY ^^^ / vvv !_CCCL_BUILTIN_FPCLASSIFY vvv
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    NV_IF_TARGET(NV_IS_HOST, (return ::fpclassify(__x);))
++    NV_IF_TARGET(NV_IS_HOST, (return fpclassify(__x);))
+   }
+   return ::cuda::std::__fpclassify_impl(__x);
+ #endif // !_CCCL_BUILTIN_FPCLASSIFY
+@@ -153,7 +153,7 @@ template <class _Tp>
+ #  else // ^^^ _CCCL_BUILTIN_FPCLASSIFY ^^^ / vvv !_CCCL_BUILTIN_FPCLASSIFY vvv
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    NV_IF_TARGET(NV_IS_HOST, (return ::fpclassify(__x);))
++    NV_IF_TARGET(NV_IS_HOST, (return fpclassify(__x);))
+   }
+   return ::cuda::std::__fpclassify_impl(__x);
+ #  endif // !_CCCL_BUILTIN_FPCLASSIFY
+diff --git a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isfinite.h b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isfinite.h
+index 72c5910..44e68f8 100644
+--- a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isfinite.h
++++ b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isfinite.h
+@@ -46,7 +46,7 @@ template <class _Tp>
+   static_assert(is_floating_point_v<_Tp>, "Only standard floating-point types are supported");
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    return ::isfinite(__x);
++    return isfinite(__x);
+   }
+   return !::cuda::std::isnan(__x) && !::cuda::std::isinf(__x);
+ }
+@@ -58,7 +58,7 @@ template <class _Tp>
+ #else // ^^^ _CCCL_BUILTIN_ISFINITE ^^^ / vvv !_CCCL_BUILTIN_ISFINITE vvv
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    return ::isfinite(__x);
++    return isfinite(__x);
+   }
+ #  if _CCCL_HAS_CONSTEXPR_BIT_CAST()
+   return (::cuda::std::__fp_get_storage(__x) & __fp_exp_mask_of_v<float>) != __fp_exp_mask_of_v<float>;
+@@ -75,7 +75,7 @@ template <class _Tp>
+ #else // ^^^ _CCCL_BUILTIN_ISFINITE ^^^ / vvv !_CCCL_BUILTIN_ISFINITE vvv
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    return ::isfinite(__x);
++    return isfinite(__x);
+   }
+ #  if _CCCL_HAS_CONSTEXPR_BIT_CAST()
+   return (::cuda::std::__fp_get_storage(__x) & __fp_exp_mask_of_v<double>) != __fp_exp_mask_of_v<double>;
+diff --git a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isinf.h b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isinf.h
+index 50b8cde..82d34aa 100644
+--- a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isinf.h
++++ b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isinf.h
+@@ -47,7 +47,7 @@ template <class _Tp>
+   static_assert(is_floating_point_v<_Tp>, "Only standard floating-point types are supported");
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    return ::isinf(__x);
++    return isinf(__x);
+   }
+   if (::cuda::std::isnan(__x))
+   {
+@@ -70,7 +70,7 @@ template <class _Tp>
+ #elif _CCCL_HAS_CONSTEXPR_BIT_CAST()
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    return ::isinf(__x);
++    return isinf(__x);
+   }
+   return (::cuda::std::__fp_get_storage(__x) & __fp_exp_mant_mask_of_v<float>) == __fp_exp_mask_of_v<float>;
+ #else // ^^^ _CCCL_HAS_CONSTEXPR_BIT_CAST() ^^^ / vvv !_CCCL_HAS_CONSTEXPR_BIT_CAST() vvv
+@@ -92,7 +92,7 @@ template <class _Tp>
+ #elif _CCCL_HAS_CONSTEXPR_BIT_CAST()
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    return ::isinf(__x);
++    return isinf(__x);
+   }
+   return (::cuda::std::__fp_get_storage(__x) & __fp_exp_mant_mask_of_v<double>) == __fp_exp_mask_of_v<double>;
+ #else // ^^^ _CCCL_HAS_CONSTEXPR_BIT_CAST() ^^^ / vvv !_CCCL_HAS_CONSTEXPR_BIT_CAST() vvv
+diff --git a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isnan.h b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isnan.h
+index 959a110..39373f2 100644
+--- a/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isnan.h
++++ b/usr/local/cuda-13.2/include/cccl/cuda/std/__cmath/isnan.h
+@@ -45,7 +45,7 @@ template <class _Tp>
+   static_assert(is_floating_point_v<_Tp>, "Only standard floating-point types are supported");
+   if (!::cuda::std::__cccl_default_is_constant_evaluated())
+   {
+-    return ::isnan(__x);
++    return isnan(__x);
+   }
+   return __x != __x;
+ }
+-- 
+2.43.0
+

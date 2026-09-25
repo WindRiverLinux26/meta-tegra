@@ -30,3 +30,5 @@ RPROVIDES:${PN} += "libusbgx-tegra"
 RRECOMMENDS:${PN} = "kernel-module-tegra-xudc"
 RCONFLICTS:${PN} = "libusbgx libusbgx-examples"
 PACKAGE_ARCH = "${TEGRA_PKGARCH}"
+
+CVE_PRODUCT = "libusbgx"

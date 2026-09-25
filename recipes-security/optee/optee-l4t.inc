@@ -5,22 +5,25 @@ TEGRA_SRC_SUBARCHIVE = "Linux_for_Tegra/source/nvidia-jetson-optee-source.tbz2"
 inherit l4t_bsp python3native
 require recipes-bsp/tegra-sources/tegra-sources-${L4T_VERSION}.inc
 
-CVE_PRODUCT = "linaro:op-tee op-tee:op-tee_os"
-
-DEPENDS = "python3-pyelftools-native python3-cryptography-native standalone-mm-optee-tegra"
+DEPENDS = "python3-pyelftools-native python3-cryptography-native"
+DEPENDS:append:tegra234 = " edk2-nvidia-standalone-mm"
 # python3-cryptography needs the legacy provider, so set OPENSSL_MODULES to the
 # right path until this is relocated automatically.
 export OPENSSL_MODULES = "${STAGING_LIBDIR_NATIVE}/ossl-modules"
 
 TOOLCHAIN = "gcc"
 
+CVE_VERSION = "${@d.getVar('PV').split('-l4t-')[0]}"
+
 OPTEE_NV_PLATFORM ?= ""
 OPTEE_NV_PLATFORM:tegra234 = "t234"
+OPTEE_NV_PLATFORM:tegra264 = "t264"
 
 TA_DEV_KIT_DIR = "${STAGING_INCDIR}/optee/export-user_ta"
 
 TEGRA_OPTEE_TA_SIGN_KEY ?= ""
 OPTEE_ENABLE_FTPM ?= "0"
+OPTEE_ENABLE_FTPM:tegra264 = "1"
 
 FTPM_CFG = " \
     CFG_CORE_TPM_EVENT_LOG=y \
@@ -36,11 +39,13 @@ EXTRA_OEMAKE = "\
     CFLAGS64='${TOOLCHAIN_OPTIONS} ${DEBUG_PREFIX_MAP}' \
     platform-aflags-generic='${DEBUG_PREFIX_MAP} -pipe' \
     TA_DEV_KIT_DIR=${TA_DEV_KIT_DIR} \
+"
+EXTRA_OEMAKE:append:tegra234 = "\
     CFG_WITH_STMM_SP=y CFG_STMM_PATH=${@oe.path.relative(d.getVar('S'),d.getVar('B'))}/standalone_mm_optee.bin \
     CFG_HWRNG_PTA=y CFG_HWRNG_QUALITY=1024 \
 "
 
-do_compile:prepend() {
+do_compile:prepend:tegra234() {
     cp ${STAGING_DATADIR}/edk2-nvidia/standalone_mm_optee.bin ${B}/
 }
 python __anonymous() {

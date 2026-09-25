@@ -1,4 +1,11 @@
 #!/bin/bash
+# -*- mode: shell-script; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
+#
+# initrd-flash.sh - Initrd-based flashing for Tegra devices
+#
+# Supports both T234 (Orin) and T264 (Thor) SoCs:
+#   T234: Uses tegraflash.py-based flow with USB mass storage
+#   T264: Uses unified flash flow (create_bsp_images.py)
 
 set -o pipefail
 
@@ -6,6 +13,8 @@ me=$(basename "$0")
 here=$(readlink -f $(dirname "$0"))
 
 declare -A DEFAULTS
+SUDO=
+[ $(id -u) -eq 0 ] || SUDO="sudo"
 
 usage() {
     cat <<EOF
@@ -13,14 +22,21 @@ Usage:
   $me [options]
 
 Options:
+  -D|--debug            Enable debug logging when running flash script
   -h|--help             Displays this usage information
-  --skip-bootloader     Skip boot partition programming
-  --usb-instance        USB instance of Jetson device
+  --external-only       Write only the external storage device
   --erase-nvme          Erase NVME drive during flashing
+  -k|--partition NAME   Write only the specified partition (T264 only)
+  --qspi-only           Write only the QSPI flash (boot firmware)
+  --usb-instance        USB instance of Jetson device
+  --no-bmap             Do not use bmaptool for writing data (T234 only)
 
 Options passed through to flash helper:
   -u                    PKC key file for signing
   -v                    SBK key file for signing
+
+Note that --external-only, --qspi-only, and --partition are mutually
+exclusive.
 
 EOF
 }
@@ -46,11 +62,15 @@ instance_args=
 keyfile=
 sbk_keyfile=
 skip_bootloader=0
+qspi_only=0
+partition_name=
 early_final_status=0
 erase_nvme=0
+ignore_bmap=0
 check_usb_instance="${TEGRAFLASH_CHECK_USB_INSTANCE:-no}"
+uniflash_flags=""
 
-ARGS=$(getopt -n $(basename "$0") -l "usb-instance:,help,skip-bootloader,erase-nvme" -o "u:v:h" -- "$@")
+ARGS=$(getopt -n $(basename "$0") -l "usb-instance:,help,skip-bootloader,external-only,qspi-only,partition:,debug,erase-nvme,no-bmap" -o "u:v:k:hD" -- "$@")
 if [ $? -ne 0 ]; then
     usage >&2
     exit 1
@@ -60,70 +80,87 @@ unset ARGS
 
 while true; do
     case "$1" in
-	--usb-instance)
-	    usb_instance="$2"
-	    shift 2
-	    ;;
-	--skip-bootloader)
-	    skip_bootloader=1
-	    shift
-	    ;;
-	--erase-nvme)
-	    erase_nvme=1
-	    shift
-	    ;;
-	-u)
-	    keyfile="$2"
-	    shift 2
-	    ;;
-	-v)
-	    sbk_keyfile="$2"
-	    shift 2
-	    ;;
-	-h|--help)
-	    usage
-	    exit 0
-	    ;;
-	--)
-	    shift
-	    break
-	    ;;
-	*)
-	    echo "Error processing options" >&2
-	    usage
-	    exit 1
-	    ;;
+        --usb-instance)
+            usb_instance="$2"
+            shift 2
+            ;;
+        --skip-bootloader|--external-only)
+            skip_bootloader=1
+            shift
+            if [ $qspi_only -eq 1 -o -n "$partition_name" ]; then
+                echo "ERR: specify only one of --external-only, --qspi-only, --partition" >&2
+                exit 1
+            fi
+            ;;
+        --qspi-only)
+            qspi_only=1
+            shift
+            if [ $skip_bootloader -eq 1 -o -n "$partition_name" ]; then
+                echo "ERR: specify only one of --external-only, --qspi-only, --partition" >&2
+                exit 1
+            fi
+            ;;
+        --erase-nvme)
+            erase_nvme=1
+            uniflash_flags="$uniflash_flags --clean"
+            shift
+            ;;
+        --no-bmap)
+            ignore_bmap=1
+            shift
+            ;;
+        -u)
+            keyfile="$2"
+            shift 2
+            ;;
+        -v)
+            sbk_keyfile="$2"
+            shift 2
+            ;;
+        -k|--partition)
+            partition_name="$2"
+            shift 2
+            if [ $skip_bootloader -eq 1 -o $qspi_only -eq 1 ]; then
+                echo "ERR: specify only one of --external-only, --qspi-only, --partition" >&2
+                exit 1
+            fi
+            uniflash_flags="$uniflash_flags -u $partition_name"
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -D|--debug)
+            uniflash_flags="$uniflash_flags -D"
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Error processing options" >&2
+            usage
+            exit 1
+            ;;
     esac
 done
 
-check_prerequisites() {
-    local missing=0
-
-    # Required: udisksctl (from udisks2 package)
-    if ! command -v udisksctl >/dev/null 2>&1; then
-        echo "ERR: 'udisksctl' command not found." >&2
-        echo "     Please install the 'udisks2' package." >&2
-        missing=1
-    fi
-
-    if [ $missing -ne 0 ]; then
-        exit 1
-    fi
-}
-
-check_prerequisites
-
 if [ -n "$PRESIGNED" ]; then
     if [ -n "$keyfile" -o -n "$sbk_keyfile" ]; then
-	echo "WARN: binaries already signed; ignoring signing options" >&2
-	keyfile=
-	sbk_keyfile=
+        echo "WARN: binaries already signed; ignoring signing options" >&2
+        keyfile=
+        sbk_keyfile=
     fi
 fi
 
 wait_for_rcm() {
     "$here/find-jetson-usb" --wait "$usb_instance"
 }
+
+# ===========================================================================
+# T234 (Orin) functions - tegraflash.py-based flow with USB mass storage
+# ===========================================================================
 
 copy_signed_binaries() {
     local signdir="${1:-signed}"
@@ -133,16 +170,16 @@ copy_signed_binaries() {
     local line
 
     while read line; do
-	eval "$line"
-	[ -n "$partfile" ] || continue
-	if [ ! -e "$signdir/$partfile" ]; then
-	    if [ ! -e "$destdir/$partfile" ] && ! echo "$partfile" | grep -q "FILE"; then
-		echo "ERR: could not copy $partfile from $signdir" >&2
-		return 1
-	    fi
-	else
-	    cp "$signdir/$partfile" "$destdir"
-	fi
+        eval "$line"
+        [ -n "$partfile" ] || continue
+        if [ ! -e "$signdir/$partfile" ]; then
+            if [ ! -e "$destdir/$partfile" ] && ! echo "$partfile" | grep -q "FILE"; then
+                echo "ERR: could not copy $partfile from $signdir" >&2
+                return 1
+            fi
+        else
+            cp "$signdir/$partfile" "$destdir"
+        fi
     done < <("$here/nvflashxmlparse" -t boot "$signdir/$xmlfile"; "$here/nvflashxmlparse" -t rootfs "$signdir/$xmlfile")
 }
 
@@ -159,96 +196,84 @@ EOF
     chmod +x rcm-boot.sh
 }
 
-sign_binaries() {
-    if [ -n "$PRESIGNED" ]; then
-	cp doflash.sh flash_signed.sh
-	sed -i -e's,--cfg secureflash.xml,--cfg internal-secureflash.xml,g' flash_signed.sh
-	cp secureflash.xml internal-secureflash.xml
-	if [ -e external-flash.xml.in ]; then
-	    cp external-flash.xml.in external-secureflash.xml
-	fi
-	if ! copy_bootloader_files bootloader_staging; then
-	    return 1
-	fi
-	if [ -e rcm-boot.sh ]; then
-	    return 0
-	fi
-	if [ ! -e rcmboot_blob/rcmbootcmd.txt ]; then
-	    echo "ERR: missing RCM boot blob in pre-signed binaries" >&2
-	    return 1
-	fi
-	create_rcm_boot_script
-	return 0
+prepare_binaries_t234() {
+    if [ -z "$PRESIGNED" ]; then
+        if [ -z "$BOARDID" -o -z "$FAB" ]; then
+            wait_for_rcm
+        fi
+        rm -rf rcmboot_blob
+        if MACHINE=$MACHINE BOARDID=$BOARDID FAB=$FAB BOARDSKU=$BOARDSKU BOARDREV=$BOARDREV CHIPREV=$CHIPREV CHIP_SKU=$CHIP_SKU RAMCODE=$RAMCODE serial_number=$serial_number \
+              "$here/$FLASH_HELPER" --no-flash --datafile "$DATAFILE" --sign -u "$keyfile" -v "$sbk_keyfile" $instance_args \
+              flash.xml.in $LNXFILE $ROOTFS_IMAGE; then
+            cp secureflash.xml internal-secureflash.xml
+            mv flash.idx internal-flash.idx
+        else
+            return 1
+        fi
     fi
-
-    if [ -z "$BOARDID" -o -z "$FAB" ]; then
-	wait_for_rcm
+    if [ ! -e rcmboot_blob/rcmbootcmd.txt ]; then
+        echo "ERR: RCM boot blob incomplete" >&2
+        return 1
     fi
-    rm -rf rcmboot_blob
-    if MACHINE=$MACHINE BOARDID=$BOARDID FAB=$FAB BOARDSKU=$BOARDSKU BOARDREV=$BOARDREV CHIPREV=$CHIPREV CHIP_SKU=$CHIP_SKU serial_number=$serial_number \
-	      "$here/$FLASH_HELPER" --no-flash --sign -u "$keyfile" -v "$sbk_keyfile" $instance_args \
-	      flash.xml.in $DTBFILE $EMMC_BCTS $ODMDATA $LNXFILE $ROOTFS_IMAGE; then
-	cp flashcmd.txt flash_signed.sh
-	sed -i -e's,--cfg secureflash.xml,--cfg internal-secureflash.xml,g' flash_signed.sh
-	cp secureflash.xml internal-secureflash.xml
-	if [ -e external-flash.xml.in ]; then
-	    cp external-flash.xml.in external-secureflash.xml
-	fi
-	create_rcm_boot_script
-    else
-	return 1
+    create_rcm_boot_script
+    if ! copy_bootloader_files_t234 bootloader_staging; then
+        return 1
     fi
-    if ! copy_bootloader_files bootloader_staging; then
-	return 1
-    fi
-    if [ -e external-flash.xml.in ]; then
-	if grep -q 'oem_sign="true"' external-flash.xml.in 2>/dev/null; then
-	    . ./boardvars.sh
-            if MACHINE=$MACHINE BOARDID=$BOARDID FAB=$FAB BOARDSKU=$BOARDSKU BOARDREV=$BOARDREV CHIPREV=$CHIPREV CHIP_SKU=$CHIP_SKU \
-				"$here/$FLASH_HELPER" --no-flash --sign --external-device -u "$keyfile" -v "$sbk_keyfile" $instance_args \
-				external-flash.xml.in $DTBFILE $EMMC_BCTS $ODMDATA $LNXFILE $ROOTFS_IMAGE; then
-		mv secureflash.xml external-secureflash.xml
-	    else
-		return 1
-	    fi
-	else
-	    cp external-flash.xml.in external-secureflash.xml
-	fi
+    if [ $qspi_only -eq 0 ] && [ -e external-flash.xml.in ]; then
+        # Even if there are no signable entries in the external device layout, we need the script to
+        # apply its sed rewrites to the the xxxFILE tokens.
+        . ./boardvars.sh
+        if MACHINE=$MACHINE BOARDID=$BOARDID FAB=$FAB BOARDSKU=$BOARDSKU BOARDREV=$BOARDREV CHIPREV=$CHIPREV CHIP_SKU=$CHIP_SKU RAMCODE=$RAMCODE \
+                            "$here/$FLASH_HELPER" --no-flash --sign --external-device --datafile "$DATAFILE" -u "$keyfile" -v "$sbk_keyfile" $instance_args \
+                            external-flash.xml.in $LNXFILE $ROOTFS_IMAGE; then
+            mv secureflash.xml external-secureflash.xml
+        else
+            return 1
+        fi
     fi
     return 0
 }
 
-prepare_for_rcm_boot() {
-    :
-}
-
-run_rcm_boot() {
+run_rcm_boot_t234() {
     if [ -z "$BR_CID" ]; then
-	if ./rcm-boot.sh | tee rcm-boot.output; then
-	    BR_CID=$(grep BR_CID: rcm-boot.output | cut -d: -f2)
-	    return 0
-	else
-	    return 1
-	fi
+        if ./rcm-boot.sh | tee rcm-boot.output; then
+            BR_CID=$(grep BR_CID: rcm-boot.output | cut -d: -f2)
+            return 0
+        else
+            return 1
+        fi
     fi
     ./rcm-boot.sh || return 1
 }
 
 mount_partition() {
     local dev="$1"
-    local mnt=$(cat /proc/mounts | grep "^$dev" | cut -d' ' -f2)
-    local i=$(echo $mnt|awk -F' ' '{print NF}')
-    while [ $i -ne 0 ]; do
-        local mnt=$(echo ${mnt} | cut -d' ' -f$i)
-		if ! umount "${mnt}" > /dev/null 2>&1; then
-            echo "ERR: unmount ${mnt} on device $dev failed" >&2
+    local mnt=$(cat /proc/mounts | grep "^$dev " | cut -d' ' -f2)
+    local j
+    local m
+    for m in $mnt; do
+        if ! umount "$m" > /dev/null 2>&1; then
+            echo "ERR: unmount $m on device $dev failed" >&2
             return 1
         fi
-        i=$(expr $i - 1)
     done
-    if udisksctl mount -b "$dev" > /dev/null; then
-	cat /proc/mounts | grep "^$dev" | cut -d' ' -f2
-	return 0
+
+    if udisksctl mount -b "$dev" > /dev/null 2>&1; then
+        for j in 1 2 3 4 5; do
+            sleep 1
+            mnt=$(cat /proc/mounts | grep "^$dev " | cut -d' ' -f2)
+            if [ -n "$mnt" ]; then
+                echo "$mnt"
+                return 0
+            fi
+        done
+    fi
+    # Fall back to direct mount if udisksctl fails (e.g. no udevd in containers)
+    local fallback_mnt="/tmp/initrd-flash-mnt.$$"
+    mkdir -p "$fallback_mnt"
+    if mount "$dev" "$fallback_mnt" > /dev/null 2>&1; then
+        echo "$fallback_mnt"
+        return 0
     fi
     echo ""
     return 1
@@ -259,15 +284,36 @@ unmount_and_release() {
     local dev="$2"
     local remain=3
     if [ -n "$mnt" ]; then
-	udisksctl unmount --force -b "$dev"
+        udisksctl unmount --force -b "$dev" 2>/dev/null || umount "$mnt" 2>/dev/null
     fi
     while [ $remain -gt 0 ]; do
-	if udisksctl power-off -b "$dev"; then
-	    return 0
-	fi
-	sleep 1
-	remain=$(expr $remain - 1)
+        if udisksctl power-off -b "$dev" 2>/dev/null; then
+            return 0
+        fi
+        sleep 1
+        remain=$(expr $remain - 1)
     done
+    # Fallback: force a USB disconnect by unbinding the device from the host.
+    # This is needed when udisksctl/udevd are not available (e.g. containers
+    # or minimal host installs without udisks2). We walk up the sysfs tree
+    # from the block device to find the USB device ID, then unbind + rebind
+    # the port so the target sees a disconnect and the port is ready for
+    # the next gadget export.
+    local devname=$(basename "$dev")
+    local syspath=$(readlink -f "/sys/block/$devname" 2>/dev/null)
+    if [ -n "$syspath" ]; then
+        local usbdev=$(echo "$syspath" | grep -o 'usb[0-9]*/[0-9]-[0-9]*' | tail -1 | cut -d/ -f2)
+        if [ -n "$usbdev" ]; then
+            local sysfs_usb
+            for sysfs_usb in /sys/bus/usb/drivers/usb /dev/.lxc/sys/bus/usb/drivers/usb; do
+                if [ -e "$sysfs_usb/unbind" ] && echo "$usbdev" > "$sysfs_usb/unbind" 2>/dev/null; then
+                    sleep 1
+                    echo "$usbdev" > "$sysfs_usb/bind" 2>/dev/null
+                    return 0
+                fi
+            done
+        fi
+    fi
     return 1
 }
 
@@ -281,205 +327,338 @@ wait_for_usb_storage() {
 
     echo -n "Waiting for USB storage device $name from ${fromname:-target}..." >&2
     while [ -z "$output" ]; do
-	for candidate in /dev/sd[a-z]; do
-	    [ -b "$candidate" ] || continue
-	    ok=
-	    if [ -n "$sessid" ]; then
-		cand_model=$(udevadm info --query=property $candidate | grep '^ID_MODEL=' | cut -d= -f2)
-		if [ "$cand_model" = "$sessid" ]; then
-		    ok=yes
-		fi
-	    elif [ -n "$usbi" -a "$check_usb_instance" = "yes" ]; then
-		cand_devpath=$(udevadm info --query=property $candidate | grep '^DEVPATH=' | cut -d= -f2)
-		if echo "$cand_devpath" | grep -q "/$usbi/" 2>/dev/null; then
-		    ok=yes
-		fi
-	    else
-		ok=yes
-	    fi
-	    if [ "$ok" = "yes" ]; then
-		cand_vendor=$(udevadm info --query=property $candidate | grep '^ID_VENDOR=' | cut -d= -f2)
-		if [ "$cand_vendor" = "$name" ]; then
-		    echo "[$candidate]" >&2
-		    output="$candidate"
-		    break
-		elif [ "$name" != "flashpkg" -a "$cand_vendor" = "flashpkg" ]; then
-		    # This could happen if there was a failure on the device side
-		    echo "[got flashpkg when expecting $name]" >&2
-		    echo ""
-		    early_final_status=1
-		    return 1
-		fi
-	    fi
-	done
-	if [ -z "$output" ]; then
-	    sleep 1
-	    count=$(expr $count \+ 1)
-	    if [ $count -ge 5 ]; then
-		echo -n "." >&2
-		count=0
-	    fi
-	fi
+        for candidate in /dev/sd[a-z]; do
+            [ -b "$candidate" ] || continue
+            ok=
+            local devname=$(basename "$candidate")
+            if [ -n "$sessid" ]; then
+                cand_model=$(udevadm info --query=property $candidate 2>/dev/null | grep '^ID_MODEL=' | cut -d= -f2)
+                # Fall back to sysfs if udevd is not running (e.g. in containers)
+                if [ -z "$cand_model" -a -f "/sys/block/$devname/device/model" ]; then
+                    cand_model=$(cat "/sys/block/$devname/device/model" 2>/dev/null | tr -d ' ')
+                fi
+                if [ "$cand_model" = "$sessid" ]; then
+                    ok=yes
+                fi
+            elif [ -n "$usbi" -a "$check_usb_instance" = "yes" ]; then
+                cand_devpath=$(udevadm info --query=property $candidate 2>/dev/null | grep '^DEVPATH=' | cut -d= -f2)
+                if [ -z "$cand_devpath" -a -f "/sys/block/$devname/uevent" ]; then
+                    cand_devpath=$(grep '^DEVPATH=' "/sys/block/$devname/uevent" 2>/dev/null | cut -d= -f2)
+                fi
+                if echo "$cand_devpath" | grep -q "/$usbi/" 2>/dev/null; then
+                    ok=yes
+                fi
+            else
+                ok=yes
+            fi
+            if [ "$ok" = "yes" ]; then
+                cand_vendor=$(udevadm info --query=property $candidate 2>/dev/null | grep '^ID_VENDOR=' | cut -d= -f2)
+                # Fall back to sysfs if udevd is not running
+                if [ -z "$cand_vendor" -a -f "/sys/block/$devname/device/vendor" ]; then
+                    cand_vendor=$(cat "/sys/block/$devname/device/vendor" 2>/dev/null | tr -d ' ')
+                fi
+                if [ "$cand_vendor" = "$name" ]; then
+                    echo "[$candidate]" >&2
+                    output="$candidate"
+                    break
+                elif [ "$name" != "flashpkg" -a "$cand_vendor" = "flashpkg" ]; then
+                    # This could happen if there was a failure on the device side
+                    echo "[got flashpkg when expecting $name]" >&2
+                    echo ""
+                    early_final_status=1
+                    return 1
+                fi
+            fi
+        done
+        if [ -z "$output" ]; then
+            sleep 1
+            count=$(expr $count \+ 1)
+            if [ $count -ge 5 ]; then
+                echo -n "." >&2
+                count=0
+            fi
+        fi
     done
     echo "$output"
     return 0
 }
 
-copy_bootloader_files() {
+copy_bootloader_files_t234() {
     local dest="$1"
     local partnumber partloc partname start_location partsize partfile partattrs partsha
     local devnum instnum
     local is_spi is_mmcboot
     rm -f "$dest/partitions.conf"
     while IFS=", " read partnumber partloc start_location partsize partfile partattrs partsha; do
-	# Need to trim off leading blanks
-	devnum=$(echo "$partloc" | cut -d':' -f 1)
-	instnum=$(echo "$partloc" | cut -d':' -f 2)
-	partname=$(echo "$partloc" | cut -d':' -f 3)
-	# SPI is 3:0
-	# eMMC boot blocks (boot0/boot1) are 0:3
-	# eMMC user is 1:3
-	# NVMe (any external device) is 9:0
-	if [ $devnum -eq 3 -a $instnum -eq 0 ] || [ $devnum -eq 0 -a $instnum -eq 3 ]; then
-	    if [ -n "$partfile" ]; then
-		cp "$partfile" "$dest/"
-	    fi
-	    if [ $devnum -eq 3 -a $instnum -eq 0 ]; then
-		is_spi=yes
-	    elif [ $devnum -eq 0 -a $instnum -eq 3 ]; then
-		is_mmcboot=yes
-	    fi
-	    echo "$partname:$start_location:$partsize:$partfile" >> "$dest/partitions.conf"
-	fi
-    done < flash.idx
+        # Need to trim off leading blanks
+        devnum=$(echo "$partloc" | cut -d':' -f 1)
+        instnum=$(echo "$partloc" | cut -d':' -f 2)
+        partname=$(echo "$partloc" | cut -d':' -f 3)
+        # SPI is 3:0
+        # eMMC boot blocks (boot0/boot1) are 0:3
+        # eMMC user is 1:3
+        # NVMe (any external device) is 9:0
+        if [ $devnum -eq 3 -a $instnum -eq 0 ] || [ $devnum -eq 0 -a $instnum -eq 3 ]; then
+            if [ -n "$partfile" ]; then
+                cp "$partfile" "$dest/"
+            fi
+            if [ $devnum -eq 3 -a $instnum -eq 0 ]; then
+                is_spi=yes
+            elif [ $devnum -eq 0 -a $instnum -eq 3 ]; then
+                is_mmcboot=yes
+            fi
+            echo "$partname:$start_location:$partsize:$partfile" >> "$dest/partitions.conf"
+        fi
+    done < internal-flash.idx
     if [ -n "$is_spi" ]; then
-	if [ -n "$is_mmcboot" ]; then
-	    echo "ERR: found bootloader entries for both SPI flash and eMMC boot partitions" >&2
-	    return 1
-	fi
-	echo "spi" > "$dest/boot_device_type"
+        if [ -n "$is_mmcboot" ]; then
+            echo "ERR: found bootloader entries for both SPI flash and eMMC boot partitions" >&2
+            return 1
+        fi
+        echo "spi" > "$dest/boot_device_type"
     elif [ -n "$is_mmcboot" ]; then
-	echo "mmcboot" > "$dest/boot_device_type"
+        echo "mmcboot" > "$dest/boot_device_type"
     else
-	echo "ERR: no SPI or eMMC boot partition entries found" >&2
-	return 1
+        echo "ERR: no SPI or eMMC boot partition entries found" >&2
+        return 1
     fi
     return 0
 }
 
-generate_flash_package() {
+generate_flash_package_t234() {
     local dev=$(wait_for_usb_storage "$session_id" "flashpkg" "$usb_instance")
     local exports
-    local extra_dir="$here/flashpkg-extra"
 
     if [ -z "$dev" ]; then
-	echo "ERR: could not locate USB storage device for sending flashing commands" >&2
-	return 1
+        echo "ERR: could not locate USB storage device for sending flashing commands" >&2
+        return 1
     fi
     local devsize=$(cat /sys/block/$(basename $dev)/size 2>/dev/null)
     echo "Device size in blocks: $devsize" >&2
     local mnt=$(mount_partition "$dev")
     if [ -z "$mnt" ]; then
-	echo "ERR: could not mount USB storage for writing flashing commands" >&2
-	return 1
+        echo "ERR: could not mount USB storage for writing flashing commands" >&2
+        return 1
     fi
 
     mkdir "$mnt/flashpkg/conf"
     rm -f "$mnt/flashpkg/conf/command_sequence"
     touch "$mnt/flashpkg/conf/command_sequence"
     if [ $skip_bootloader -eq 0 ]; then
-	echo "bootloader" >> "$mnt/flashpkg/conf/command_sequence"
-	mkdir "$mnt/flashpkg/bootloader"
-	cp bootloader_staging/* "$mnt/flashpkg/bootloader"
+        echo "bootloader" >> "$mnt/flashpkg/conf/command_sequence"
+        mkdir "$mnt/flashpkg/bootloader"
+        cp bootloader_staging/* "$mnt/flashpkg/bootloader"
     fi
 
-    if [ -d "$extra_dir" ]; then
-	# Allow host-side tooling to inject additional files into the flash package.
-	cp -a "$extra_dir/." "$mnt/flashpkg/flashpkg-extra"
+    if [ $qspi_only -eq 0 ]; then
+        echo "extra-pre-wipe" >> "$mnt/flashpkg/conf/command_sequence"
+
+        if [ $erase_nvme -eq 1 ]; then
+            echo "erase-nvme" >> "$mnt/flashpkg/conf/command_sequence"
+        fi
+        [ $EXTERNAL_ROOTFS_DRIVE -eq 0 -o $NO_INTERNAL_STORAGE -eq 1 ] || echo "erase-mmc" >> "$mnt/flashpkg/conf/command_sequence"
+        echo "export-devices $ROOTFS_DEVICE" >> "$mnt/flashpkg/conf/command_sequence"
+        echo "extra" >> "$mnt/flashpkg/conf/command_sequence"
     fi
-
-    echo "extra-pre-wipe" >> "$mnt/flashpkg/conf/command_sequence"
-
-    if [ $erase_nvme -eq 1 ]; then
-	echo "erase-nvme" >> "$mnt/flashpkg/conf/command_sequence"
-    fi
-    [ $EXTERNAL_ROOTFS_DRIVE -eq 0 -o $NO_INTERNAL_STORAGE -eq 1 ] || echo "erase-mmc" >> "$mnt/flashpkg/conf/command_sequence"
-    echo "export-devices $ROOTFS_DEVICE" >> "$mnt/flashpkg/conf/command_sequence"
-
-    echo "extra" >> "$mnt/flashpkg/conf/command_sequence"
     echo "reboot" >> "$mnt/flashpkg/conf/command_sequence"
 
     unmount_and_release "$mnt" "$dev" || return 1
 }
 
-write_to_device() {
+write_to_device_t234() {
     local devname="$1"
     local flashlayout="$2"
     local dev=$(wait_for_usb_storage "$session_id" "$devname" "$usb_instance")
     local opts="$3"
     local rewritefiles="internal-secureflash.xml"
-    local datased simgname rc=1
+    local rc=1
     local extraarg
 
     if [ -z "$dev" ]; then
-	echo "ERR: could not find $devname" >&2
-	return 1
+        echo "ERR: could not find $devname" >&2
+        return 1
+    fi
+    if [ $ignore_bmap -eq 1 ]; then
+        opts="$opts --no-bmap"
     fi
     if [ -e external-secureflash.xml ]; then
-	rewritefiles="external-secureflash.xml,$rewritefiles"
+        rewritefiles="external-secureflash.xml,$rewritefiles"
     fi
     "$here/nvflashxmlparse" --rewrite-contents-from=$rewritefiles -o initrd-flash.xml "$flashlayout"
-    if [ -n "$DATAFILE" ]; then
-	datased="-es,DATAFILE,$DATAFILE,"
-    else
-	datased="-e/DATAFILE/d"
-    fi
-    # XXX
-    # For the pre-signed case, the flash layout will contain the
-    # name of the sparseimage file, and we need to convert it back to
-    # the raw image name.
-    # XXX
-    simgname="${ROOTFS_IMAGE%.*}.img"
-    sed -i -e"s,$simgname,$ROOTFS_IMAGE," -e"s,APPFILE_b,$ROOTFS_IMAGE," -e"s,APPFILE,$ROOTFS_IMAGE," -e"s,DTB_FILE,kernel_$DTBFILE," $datased initrd-flash.xml
     if "$here/make-sdcard" -y $opts $extraarg initrd-flash.xml "$dev"; then
-	rc=0
+        rc=0
     fi
     if ! unmount_and_release "" "$dev"; then
-	rc=1
+        rc=1
     fi
     return $rc
 }
 
-get_final_status() {
+get_final_status_t234() {
     local dtstamp="$1"
     local dev=$(wait_for_usb_storage "$session_id" "flashpkg" "$usb_instance")
     local mnt final_status logdir logfile
     if [ -z "$dev" ]; then
-	echo "ERR: could not get final status from device" >&2
-	return 1
+        echo "ERR: could not get final status from device" >&2
+        return 1
     fi
     mnt=$(mount_partition "$dev")
     if [ -z "$mnt" ]; then
-	echo "ERR: could not mount USB device to get final status from device" >&2
-	return 1
+        echo "ERR: could not mount USB device to get final status from device" >&2
+        return 1
     fi
     final_status=$(cat $mnt/flashpkg/status)
     if [ -d "$mnt/flashpkg/logs" ]; then
-	logdir="device-logs-$dtstamp"
-	if [ -d "$logdir" ]; then
-	    echo "Logs directory $logdir already exists, replacing" >&2
-	    rm -rf "$logdir"
-	fi
-	mkdir "$logdir"
-	for logfile in "$mnt"/flashpkg/logs/*; do
-	    [ -f "$logfile" ] || continue
-	    cp "$logfile" "$logdir/"
-	done
+        logdir="device-logs-$dtstamp"
+        if [ -d "$logdir" ]; then
+            echo "Logs directory $logdir already exists, replacing" >&2
+            rm -rf "$logdir"
+        fi
+        mkdir "$logdir"
+        for logfile in "$mnt"/flashpkg/logs/*; do
+            [ -f "$logfile" ] || continue
+            cp "$logfile" "$logdir/"
+        done
     fi
     unmount_and_release "$mnt" "$dev" || return 1
     echo "Final status: $final_status"
     return 0
 }
+
+get_board_info() {
+    if ! "$here/$FLASH_HELPER" $instance_args --get-board-info -u "$keyfile" -v "$sbk_keyfile" 2>&1 >>"$logfile"; then
+        echo "ERR: could not retrieve board information" >&2
+        exit 1
+    fi
+    if [ "$CHIPID" = "0x26" ]; then
+        if ! grep -q '^BOOTSEC_MODE=' boardvars.sh; then
+            if [ -n "$sbk_keyfile" ]; then
+                echo 'BOOTSEC_MODE="PKCSBK"' >> boardvars.sh
+            elif [ -n "$keyfile" ]; then
+                echo 'BOOTSEC_MODE="PKC"' >> boardvars.sh
+            fi
+        fi
+    fi
+    . ./boardvars.sh
+    if echo "$CHIP_SKU" | grep -q ":" 2>/dev/null; then
+        chip_sku=$(echo "$CHIP_SKU" | cut -d: -f4)
+    else
+        chip_sku=$CHIP_SKU
+    fi
+    echo "Board ID($BOARDID) version($FAB) sku($BOARDSKU) revision($BOARDREV) Chip SKU($chip_sku) ramcode($RAMCODE)"
+}
+
+# ===========================================================================
+# T264 (Thor) functions - unified flash flow
+# ===========================================================================
+
+prepare_binaries_t264() {
+    local target="$1"
+    local layout_xml="$2"
+    local kernel="$3"
+    local rootfs_img="$4"
+    local datafile="$5"
+
+    if [ "$target" = "internal" ]; then
+        if [ -z "$PRESIGNED" ]; then
+            if ! MACHINE=$MACHINE BOARDID=$BOARDID FAB=$FAB BOARDSKU=$BOARDSKU BOARDREV=$BOARDREV CHIPREV=$CHIPREV CHIP_SKU=$CHIP_SKU RAMCODE=$RAMCODE serial_number=$serial_number \
+                 "$here/$FLASH_HELPER" --no-flash --sign -u "$keyfile" -v "$sbk_keyfile" --datafile "$datafile" $instance_args "$layout_xml" "$kernel" "$rootfs_img"; then
+                return 1
+            fi
+            cp secureflash.xml internal-secureflash.xml
+            mv flash.idx internal-flash.idx
+            mkdir -p tools/kernel_flash/images/internal
+            if ! stage_files_for_uniflash tools/kernel_flash/images/internal internal-flash.idx internal-secureflash.xml; then
+                return 1
+            fi
+        fi
+        return 0
+    elif [ "$target" = "external" ]; then
+        if [ -z "$PRESIGNED" ]; then
+            if ! MACHINE=$MACHINE BOARDID=$BOARDID FAB=$FAB BOARDSKU=$BOARDSKU BOARDREV=$BOARDREV CHIPREV=$CHIPREV CHIP_SKU=$CHIP_SKU RAMCODE=$RAMCODE \
+                 "$here/$FLASH_HELPER" --no-flash --sign --external-device -u "$keyfile" -v "$sbk_keyfile" --datafile "$datafile" $instance_args "$layout_xml" "$kernel" "$rootfs_img"; then
+                return 1
+            fi
+            mv secureflash.xml external-secureflash.xml
+            mv flash.idx external-flash.idx
+            mkdir -p tools/kernel_flash/images/external
+            if ! stage_files_for_uniflash tools/kernel_flash/images/external external-flash.idx external-secureflash.xml; then
+                return 1
+            fi
+        fi
+        return 0
+    elif [ "$target" = "rcm-boot" ]; then
+        if [ -z "$PRESIGNED" ]; then
+            rm -rf rcmboot_blob
+            if ! MACHINE=$MACHINE BOARDID=$BOARDID FAB=$FAB BOARDSKU=$BOARDSKU BOARDREV=$BOARDREV CHIPREV=$CHIPREV CHIP_SKU=$CHIP_SKU RAMCODE=$RAMCODE serial_number=$serial_number \
+                 "$here/$FLASH_HELPER" --no-flash --rcm-boot -u "$keyfile" -v "$sbk_keyfile" --datafile "$datafile" $instance_args "$layout_xml" "$kernel" "$rootfs_img"; then
+                echo "ERR: could not create RCM boot blob" >&2
+                return 1
+            fi
+        fi
+        rm -rf bootloader
+        mkdir bootloader
+        cp -R applet bootloader/
+        cp -R rcmboot_blob bootloader/
+        echo "$RAMCODE" > bootloader/ramcode.txt
+        return 0
+    else
+        echo "ERR: internal error, unrecognized target: $target" >&2
+        return 1
+    fi
+}
+
+update_flash_cfg_for_partition() {
+    local flash_idx_partname="$1"
+    local storageline="$2"
+    local dest="$3"
+    local blksize partnumber partname start_location partsize partfile partguid parttype fstype partfilltoend
+    eval "$storageline"
+    if [ "$partname" = "$flash_idx_partname" -a -n "$partfile" ]; then
+        cp "$partfile" "$dest/"
+        echo "${partname}_ext=$partfile" >> "$dest/flash.cfg"
+        echo "INFO: staged $dest/$partfile for partition $partname"
+    fi
+}
+
+stage_files_for_uniflash() {
+    local dest="$1"
+    local flash_idx="$2"
+    local layout_xml="$3"
+    local partnumber partloc partname start_location partsize partfile partattrs partsha
+    local which=$(basename "$dest")
+    local devnum instnum
+    local -a partitions
+    if [ -n "$layout_xml" ]; then
+        mapfile partitions < <("./nvflashxmlparse" -t rootfs "$layout_xml")
+    fi
+    while IFS=", " read partnumber partloc start_location partsize partfile partattrs partsha; do
+        devnum=$(echo "$partloc" | cut -d':' -f 1)
+        instnum=$(echo "$partloc" | cut -d':' -f 2)
+        partname=$(echo "$partloc" | cut -d':' -f 3)
+        if [ -n "$partfile" ]; then
+            cp "$partfile" "$dest/" || return 1
+        else
+            for pline in "${partitions[@]}"; do
+                update_flash_cfg_for_partition "$partname" "$pline" "$dest"
+            done
+        fi
+    done < "$flash_idx"
+    cp "$flash_idx" "$dest/flash.idx" || return 1
+    if [ "$which" = "internal" -a -e flash-upi.idx ]; then
+        while IFS=", " read partnumber partloc start_location partsize partfile partattrs partsha; do
+            if [ -n "$partfile" ]; then
+                cp "$partfile" "$dest/" || return 1
+            fi
+        done < flash-upi.idx
+        cp flash-upi.idx "$dest/" || return 1
+    fi
+    return 0
+}
+
+# ===========================================================================
+# Main flow
+# ===========================================================================
 
 dtstamp=$(date +"%Y-%m-%d-%H.%M.%S")
 logfile="log.initrd-flash.$dtstamp"
@@ -504,70 +683,148 @@ fi
 if [ -n "$usb_instance" ]; then
     instance_args="--usb-instance $usb_instance"
 fi
-step_banner "Signing binaries"
-rm -rf bootloader_staging
-mkdir bootloader_staging
-if ! sign_binaries 2>&1 >>"$logfile"; then
-    echo "ERR: signing failed at $(date -Is)"  | tee -a "$logfile"
-    exit 1
-fi
-if [ -z "$PRESIGNED" ]; then
+
+get_board_info
+
+# Branch based on chip ID
+if [ "$CHIPID" = "0x23" ]; then
+    # ===================================================================
+    # T234 (Orin) flow - tegraflash.py with USB mass storage
+    # ===================================================================
+    step_banner "Preparing binaries"
+    rm -rf bootloader_staging
+    mkdir bootloader_staging
+    if ! prepare_binaries_t234 2>&1 >>"$logfile"; then
+        echo "ERR: signing failed at $(date -Is)" | tee -a "$logfile"
+        exit 1
+    fi
+    if [ -z "$PRESIGNED" ]; then
+        [ ! -f ./boardvars.sh ] || . ./boardvars.sh
+    fi
+
+    step_banner "Boot Jetson via RCM"
+    if ! wait_for_rcm 2>&1 | tee -a "$logfile"; then
+        echo "ERR: Device not found at $(date -Is)" | tee -a "$logfile"
+        exit 1
+    fi
+    if ! run_rcm_boot_t234 2>&1 >>"$logfile"; then
+        echo "ERR: RCM boot failed at $(date -Is)" | tee -a "$logfile"
+        exit 1
+    fi
     [ ! -f ./boardvars.sh ] || . ./boardvars.sh
-fi
-step_banner "Boot Jetson via RCM"
-if ! prepare_for_rcm_boot 2>&1 >>"$logfile"; then
-    echo "ERR: Preparing RCM boot command failed at $(date -Is)" | tee -a "$logfile"
-    exit 1
-fi
-if ! wait_for_rcm 2>&1 | tee -a "$logfile"; then
-    echo "ERR: Device not found at $(date -Is)" | tee -a "$logfile"
-    exit 1
-fi
-if ! run_rcm_boot 2>&1 >>"$logfile"; then
-    echo "ERR: RCM boot failed at $(date -Is)" | tee -a "$logfile"
-    exit 1
-fi
-[ ! -f ./boardvars.sh ] || . ./boardvars.sh
 
-if [ -z "$serial_number" ]; then
-    echo "WARN: did not get device serial number at $(date -Is)" | tee -a "$logfile"
-    session_id=
-else
-    session_id=$(printf "%x" "$serial_number" | tail -c8)
-fi
+    if [ -z "$serial_number" ]; then
+        echo "WARN: did not get device serial number at $(date -Is)" | tee -a "$logfile"
+        session_id=
+    else
+        session_id=$(printf "%x" "$serial_number" | tail -c8)
+    fi
 
-# Boot device flashing
-step_banner "Sending flash sequence commands"
-if ! generate_flash_package 2>&1 | tee -a "$logfile"; then
-    echo "ERR: could not create command package at $(date -Is)" | tee -a "$logfile"
-    exit 1
-fi
-if [ $EXTERNAL_ROOTFS_DRIVE -eq 1 ]; then
-    keep_going=1
-    step_banner "Writing partitions on external storage device"
-    if ! write_to_device $ROOTFS_DEVICE external-flash.xml.in 2>&1 | tee -a "$logfile"; then
-	echo "ERR: write failure to external storage at $(date -Is)" | tee -a "$logfile"
-	if [ $early_final_status -eq 0 ]; then
-	    exit 1
-	fi
+    step_banner "Sending flash sequence commands"
+    if ! generate_flash_package_t234 2>&1 | tee -a "$logfile"; then
+        echo "ERR: could not create command package at $(date -Is)" | tee -a "$logfile"
+        exit 1
     fi
-else
-    step_banner "Writing partitions on internal storage device"
-    if ! write_to_device $ROOTFS_DEVICE flash.xml.in 2>&1 | tee -a "$logfile"; then
-	echo "ERR: write failure to internal storage at $(date -Is)" | tee -a "$logfile"
-	if [ $early_final_status -eq 0 ]; then
-	    exit 1
-	fi
+
+    if [ $qspi_only -eq 0 ]; then
+        if [ $EXTERNAL_ROOTFS_DRIVE -eq 1 ]; then
+            step_banner "Writing partitions on external storage device"
+            if ! write_to_device_t234 $ROOTFS_DEVICE external-flash.xml.in 2>&1 | tee -a "$logfile"; then
+                echo "ERR: write failure to external storage at $(date -Is)" | tee -a "$logfile"
+                if [ $early_final_status -eq 0 ]; then
+                    exit 1
+                fi
+            fi
+        else
+            step_banner "Writing partitions on internal storage device"
+            if ! write_to_device_t234 $ROOTFS_DEVICE flash.xml.in 2>&1 | tee -a "$logfile"; then
+                echo "ERR: write failure to internal storage at $(date -Is)" | tee -a "$logfile"
+                if [ $early_final_status -eq 0 ]; then
+                    exit 1
+                fi
+            fi
+        fi
     fi
-fi
-step_banner "Waiting for final status from device"
-if ! get_final_status "$dtstamp" 2>&1 | tee -a "$logfile"; then
-    echo "ERR: failed to retrieve device status at $(date -Is)" | tee -a "$logfile"
+    step_banner "Waiting for final status from device"
+    if ! get_final_status_t234 "$dtstamp" 2>&1 | tee -a "$logfile"; then
+        echo "ERR: failed to retrieve device status at $(date -Is)" | tee -a "$logfile"
+        echo "Host-side log:              $logfile"
+        echo "Device-side logs stored in: device-logs-$dtstamp"
+        exit 1
+    fi
+    echo "Successfully finished at $(date -Is)" | tee -a "$logfile"
     echo "Host-side log:              $logfile"
     echo "Device-side logs stored in: device-logs-$dtstamp"
+    exit 0
+
+elif [ "$CHIPID" = "0x26" ]; then
+    # ===================================================================
+    # T264 (Thor) flow - unified flash
+    # ===================================================================
+
+    if [ -z "$PRESIGNED" ]; then
+        rm -rf tools/kernel_flash/images
+    fi
+
+    if [ $skip_bootloader -eq 0 ] ; then
+        step_banner "Preparing contents for QSPI boot flash"
+        if ! prepare_binaries_t264 internal flash.xml.in $LNXFILE $ROOTFS_IMAGE $DATAFILE 2>&1 >>"$logfile"; then
+            echo "ERR: preparing QSPI partitions failed at $(date -Is)"  | tee -a "$logfile"
+            exit 1
+        fi
+    fi
+
+    if [ $qspi_only -eq 0 ] && [ -e external-flash.xml.in ]; then
+        step_banner "Preparing contents for external storage"
+        if ! prepare_binaries_t264 external external-flash.xml.in $LNXFILE $ROOTFS_IMAGE $DATAFILE 2>&1 >>"$logfile"; then
+            echo "ERR: preparing external partitions failed at $(date -Is)"  | tee -a "$logfile"
+            exit 1
+        fi
+    fi
+
+    step_banner "Preparing for RCM boot"
+    if ! prepare_binaries_t264 rcm-boot rcmboot-flash.xml.in initrd-flash.img $ROOTFS_IMAGE $DATAFILE 2>&1 >>"$logfile"; then
+        echo "ERR: preparing RCM boot blob at $(date -Is)"  | tee -a "$logfile"
+        exit 1
+    fi
+
+    step_banner "Setting up unified flash workspace"
+    export CHIP_SKU
+    convargs="--profile base"
+    if [ $qspi_only -eq 0 -a $EXTERNAL_ROOTFS_DRIVE -eq 1 ]; then
+        convargs="$convargs --external-device $ROOTFS_DEVICE external-secureflash.xml"
+    fi
+    if [ -n "$BOOTSEC_MODE" ]; then
+        if [ "$BOOTSEC_MODE" = "SBKPKC" ]; then
+            BOOTSEC_MODE="PKCSBK"
+        fi
+        convargs="$convargs --security-mode $BOOTSEC_MODE"
+    fi
+    $SUDO rm -rf out
+    mkdir out
+    ./unified_flash/tools/flashtools/bootburn/create_bsp_images.py -b jetson-t264 --toolsonly -l -g $PWD/out --l4t
+    mkdir -p out/flash_workspace/flash-images out/flash_workspace/rcm-boot
+    ./create_l4t_bsp_images.py $convargs --info --dest $PWD/out
+    ./create_l4t_bsp_images.py $convargs --dest $PWD/out/flash_workspace/flash-images
+    ./create_l4t_bsp_images.py $convargs --dest $PWD/out/flash_workspace/rcm-boot --rcm-boot
+    cp -R out/flash_workspace/rcm-boot out/flash_workspace/rcm-flash
+    cat > out/doflash.sh <<EOF
+here=\$(readlink -f \$(dirname "\$0"))
+oldwd="\$PWD"
+"\$here/tools/flashtools/bootburn/flash_bsp_images.py" -b jetson-t264 --l4t -P "\$here/flash_workspace" $instance_args "\$@"
+rc=\$?
+cd "\$oldwd"
+exit \$rc
+EOF
+    chmod +x out/doflash.sh
+
+    step_banner "Running unified flash"
+    $SUDO ./out/doflash.sh $uniflash_flags 2>&1 | tee -a "$logfile"
+    echo "Finished at $(date -Is)" | tee -a "$logfile"
+    echo "Host-side log:              $logfile"
+    exit 0
+
+else
+    echo "ERR: unsupported CHIPID: $CHIPID" >&2
     exit 1
 fi
-echo "Successfully finished at $(date -Is)" | tee -a "$logfile"
-echo "Host-side log:              $logfile"
-echo "Device-side logs stored in: device-logs-$dtstamp"
-exit 0

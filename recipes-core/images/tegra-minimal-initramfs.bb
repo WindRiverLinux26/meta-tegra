@@ -12,10 +12,18 @@ PACKAGE_INSTALL = "\
     ${ROOTFS_BOOTSTRAP_INSTALL} \
     ${TEGRA_INITRD_INSTALL} \
     kernel-module-nvme \
-    kernel-module-pcie-tegra194 \
-    kernel-module-phy-tegra194-p2u \
+    ${TEGRA_ESSENTIAL_PCIE_RRECOMMENDS} \
     kernel-module-tegra-xudc \
     kernel-module-ucsi-ccg \
+    kernel-module-dummy \
+    kernel-module-uas \
+    kernel-module-tegra-bpmp-thermal \
+    kernel-module-pwm-tegra \
+    kernel-module-pwm-fan \
+"
+
+PACKAGE_INSTALL:append:tegra264 = "\
+    nv-kernel-module-ufs-tegra \
 "
 
 IMAGE_FEATURES = ""

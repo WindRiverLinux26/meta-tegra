@@ -17,6 +17,13 @@ tegra234-p3767-camera-p3768-imx477-dual.dts
 Upstream-Status: Pending
 
 Signed-off-by: Meng Li <Meng.Li@windriver.com>
+
+Note rebased the overlay/Makefile hunk onto the
+current l4t/l4t-r39.2.1 nvidia-oot tree -- the surrounding dtbo-y list has
+been reordered/extended since this patch was originally authored, so the
+original hunk's line numbers and context no longer match. The new
+overlay/tegra234-p3737-camera-imx477-overlay.dts file (below) is
+unchanged from the original patch.
 ---
  overlay/Makefile                              |    1 +
  .../tegra234-p3737-camera-imx477-overlay.dts  | 1084 +++++++++++++++++
@@ -27,14 +34,13 @@ diff --git a/overlay/Makefile b/overlay/Makefile
 index 93728f4..9528c94 100644
 --- a/overlay/Makefile
 +++ b/overlay/Makefile
-@@ -52,6 +52,7 @@ dtbo-y += tegra234-p3767-camera-p3768-imx477-imx219.dtbo
- dtbo-y += tegra234-p3737-camera-eCAM130A-overlay.dtbo
- dtbo-y += tegra234-p3737-camera-dual-hawk-ar0234-e3653-overlay.dtbo
+@@ -62,5 +62,6 @@ dtbo-y += tegra234-p3737-camera-imx390-addr-0x21-overlay.dtbo
  dtbo-y += tegra234-p3737-camera-imx390-overlay.dtbo
-+dtbo-y += tegra234-p3737-camera-imx477-overlay.dtbo
- dtbo-y += tegra234-p3737-camera-imx390-addr-0x21-overlay.dtbo
  dtbo-y += tegra234-p3737-camera-p3762-a00-1Hawk-overlay.dtbo
++dtbo-y += tegra234-p3737-camera-imx477-overlay.dtbo
  dtbo-y += tegra234-p3737-camera-p3762-a00-2Hawk-overlay.dtbo
+ dtbo-y += tegra234-p3737-camera-p3762-a00-3Hawk-3Owl-overlay.dtbo
+ dtbo-y += tegra234-p3737-camera-p3762-a00-4Hawk-overlay.dtbo
 diff --git a/overlay/tegra234-p3737-camera-imx477-overlay.dts b/overlay/tegra234-p3737-camera-imx477-overlay.dts
 new file mode 100644
 index 0000000..449c6eb
@@ -1127,4 +1133,3 @@ index 0000000..449c6eb
 +};
 -- 
 2.34.1
-

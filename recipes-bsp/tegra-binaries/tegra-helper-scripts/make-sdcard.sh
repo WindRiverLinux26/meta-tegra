@@ -14,42 +14,6 @@ HAVEBMAPTOOL=
 SUDO=
 [ $(id -u) -eq 0 ] || SUDO="sudo"
 
-# Check for required and optional tool dependencies.
-# Must be called after argument parsing, as it uses:
-#   - wait_for_usb_device: set by --serial-number option
-#   - keep_connection: set by --keep-connection option
-check_prerequisites() {
-    local missing=0
-
-    # Required: sgdisk (from gdisk package)
-    if ! command -v sgdisk >/dev/null 2>&1; then
-        echo "ERR: 'sgdisk' command not found." >&2
-        echo "     Please install the 'gdisk' (or 'gptfdisk' on some distributions) package." >&2
-        missing=1
-    fi
-
-    # Required for USB device operations: udisksctl (from udisks2 package)
-    if [ "$wait_for_usb_device" = "yes" -a "$keep_connection" != "yes" ]; then
-        if ! command -v udisksctl >/dev/null 2>&1; then
-            echo "ERR: 'udisksctl' command not found." >&2
-            echo "     Please install the 'udisks2' package." >&2
-            missing=1
-        fi
-    fi
-
-    # Optional but recommended: bmaptool (from bmap-tools package)
-    if command -v bmaptool >/dev/null 2>&1; then
-        HAVEBMAPTOOL=yes
-    else
-        echo "INFO: 'bmaptool' not found. Using 'dd' for partition writes (slower)." >&2
-        echo "      For faster flashing, install the 'bmap-tools' package." >&2
-    fi
-
-    if [ $missing -ne 0 ]; then
-        exit 1
-    fi
-}
-
 usage() {
     cat <<EOF
 
@@ -66,6 +30,7 @@ Options:
   -b basename             Base filename for SDcard image (required if no output specified)
   -y                      Skip prompting for confirmation
   --honor-start-locations Use the start locations emitted by nvflashxmlparse
+  --no-bmap               Don't use bmaptool for writing data
   --no-final-part         Skip special handling of final partition
   --serial-number <sn>    Select USB /dev/sd[a-z] device based on serial number
   --keep-connection       Do not disconnect USB drive after use
@@ -201,8 +166,8 @@ create_filesystems() {
 copy_to_device() {
     local src="$1"
     local dst="$2"
-    if [ -z "$HAVEBMAPTOOL" ]; then
-	dd if="$src" of="$dst" conv=fsync status=none bs=100M >/dev/null 2>&1 || return 1
+    if [ -z "$HAVEBMAPTOOL" -o -n "$ignore_bmap" ]; then
+	dd if="$src" of="$dst" bs=100M conv=fsync status=none >/dev/null 2>&1 || return 1
 	return 0
     fi
     local bmap=$(mktemp)
@@ -217,13 +182,14 @@ copy_to_device() {
 
 unmount_device() {
     local dev="$1"
-    local mnt=$(cat /proc/mounts | grep "^$dev" | cut -d' ' -f2)
-    if [ -n "$mnt" ]; then
-        if ! umount "${mnt}" > /dev/null 2>&1; then
-            echo "ERR: unmount ${mnt} on device $dev failed" >&2
+    local mnt=$(cat /proc/mounts | grep "^$dev " | cut -d' ' -f2)
+    local m
+    for m in $mnt; do
+        if ! umount "$m" > /dev/null 2>&1; then
+            echo "ERR: unmount $m on device $dev failed" >&2
             return 1
         fi
-    fi
+    done
     return 0
 }
 
@@ -351,7 +317,7 @@ confirm() {
     done
 }
 
-ARGS=$(getopt -l "serial-number:,keep-connection,no-final-part,honor-start-locations" -o "yhs:b:" -n "$me" -- "$@")
+ARGS=$(getopt -l "serial-number:,keep-connection,no-final-part,honor-start-locations,no-bmap" -o "yhs:b:" -n "$me" -- "$@")
 if [ $? -ne 0 ]; then
     usage
     exit 1
@@ -368,6 +334,7 @@ keep_connection=
 serial_number=
 ignore_finalpart=
 use_start_locations=
+ignore_bmap=
 while true; do
     case "$1" in
 	--serial-number)
@@ -387,6 +354,10 @@ while true; do
 	    use_start_locations=yes
 	    shift
 	    ;;
+        --no-bmap)
+            ignore_bmap=yes
+            shift
+            ;;
 	-h)
 	    usage
 	    exit 0
@@ -483,8 +454,6 @@ else
     fi
 fi
 
-check_prerequisites
-
 mapfile PARTS < <("$here/nvflashxmlparse" -t rootfs "$cfgfile")
 if [ ${#PARTS[@]} -eq 0 ]; then
     echo "No partition definitions found in $cfgfile" >&2
@@ -492,6 +461,10 @@ if [ ${#PARTS[@]} -eq 0 ]; then
 fi
 
 echo  "Creating partitions"
+if ! command -v sgdisk >/dev/null 2>&1; then
+    echo "ERR: 'sgdisk' command not found. Please install the 'gdisk' package." >&2
+    exit 1
+fi
 [ -b "$output" ] || dd if=/dev/zero of="$output" bs=512 count=0 seek=$outsize status=none
 if ! sgdisk "$output" --clear --mbrtogpt >/dev/null 2>&1; then
     if ! sgdisk "$output" --zap-all >/dev/null 2>&1; then
@@ -518,6 +491,9 @@ if [ -b "$output" ]; then
     fi
     sleep 1
     create_filesystems || exit 1
+fi
+if type -p bmaptool >/dev/null 2>&1; then
+    HAVEBMAPTOOL=yes
 fi
 echo "Writing partitions"
 if [ -b "$output" ]; then

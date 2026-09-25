@@ -1,0 +1,947 @@
+From 66daf55d0a9f05690673ccfc53794f6c38bc663b Mon Sep 17 00:00:00 2001
+From: Ilies CHERGUI <ichergui@nvidia.com>
+Date: Thu, 2 Apr 2026 09:37:43 -0700
+Subject: [PATCH] Updates for OE cross builds
+
+Upstream-Status: Inappropriate [oe-specific]
+
+Signed-off-by: Ilies CHERGUI <ichergui@nvidia.com>
+---
+ CMakeLists.txt                                |  8 --------
+ Samples/0_Introduction/CMakeLists.txt         | 20 -------------------
+ .../UnifiedMemoryStreams/CMakeLists.txt       | 16 +++------------
+ .../0_Introduction/asyncAPI/CMakeLists.txt    | 10 ----------
+ Samples/0_Introduction/clock/CMakeLists.txt   | 10 ----------
+ .../0_Introduction/cudaOpenMP/CMakeLists.txt  | 14 ++-----------
+ .../fp16ScalarProduct/CMakeLists.txt          |  9 ---------
+ .../0_Introduction/matrixMul/CMakeLists.txt   | 10 ----------
+ .../matrixMulDynlinkJIT/CMakeLists.txt        | 17 ++--------------
+ .../simpleAssert/CMakeLists.txt               | 10 ----------
+ .../simpleAtomicIntrinsics/CMakeLists.txt     | 11 ----------
+ .../simpleAttributes/CMakeLists.txt           | 10 ----------
+ .../simpleCallback/CMakeLists.txt             | 10 ----------
+ .../simpleCubemapTexture/CMakeLists.txt       | 10 ----------
+ .../simpleLayeredTexture/CMakeLists.txt       | 10 ----------
+ .../simpleMultiCopy/CMakeLists.txt            | 10 ----------
+ .../simpleMultiGPU/CMakeLists.txt             | 10 ----------
+ .../simpleOccupancy/CMakeLists.txt            | 10 ----------
+ .../simplePitchLinearTexture/CMakeLists.txt   | 10 ----------
+ .../simplePrintf/CMakeLists.txt               | 10 ----------
+ .../simpleStreams/CMakeLists.txt              | 10 ----------
+ .../simpleSurfaceWrite/CMakeLists.txt         | 10 ----------
+ .../simpleTemplates/CMakeLists.txt            | 10 ----------
+ .../simpleTexture/CMakeLists.txt              | 10 ----------
+ .../simpleVoteIntrinsics/CMakeLists.txt       | 10 ----------
+ .../simpleZeroCopy/CMakeLists.txt             | 10 ----------
+ .../0_Introduction/vectorAdd/CMakeLists.txt   | 10 ----------
+ Samples/1_Utilities/CMakeLists.txt            |  2 --
+ .../1_Utilities/deviceQuery/CMakeLists.txt    | 12 +----------
+ Samples/6_Performance/CMakeLists.txt          |  4 ----
+ .../UnifiedMemoryPerf/CMakeLists.txt          | 10 ----------
+ Samples/CMakeLists.txt                        | 19 ------------------
+ cmake/InstallSamples.cmake                    | 13 ++++++++++++
+ 33 files changed, 21 insertions(+), 334 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 49d69f9c..585527de 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -12,14 +12,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ set(CMAKE_CUDA_STANDARD 17)
+ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda")
+ 
+ # Add MSVC-specific flags for standard-conforming preprocessor (required for CCCL)
+diff --git a/Samples/0_Introduction/CMakeLists.txt b/Samples/0_Introduction/CMakeLists.txt
+index 74534758..238a9b51 100644
+--- a/Samples/0_Introduction/CMakeLists.txt
++++ b/Samples/0_Introduction/CMakeLists.txt
+@@ -1,46 +1,26 @@
+ add_subdirectory(UnifiedMemoryStreams)
+ add_subdirectory(asyncAPI)
+ add_subdirectory(clock)
+-add_subdirectory(clock_nvrtc)
+ add_subdirectory(cudaOpenMP)
+ add_subdirectory(fp16ScalarProduct)
+ add_subdirectory(matrixMul)
+-add_subdirectory(matrixMulDrv)
+ add_subdirectory(matrixMulDynlinkJIT)
+-add_subdirectory(matrixMul_nvrtc)
+-add_subdirectory(mergeSort)
+-add_subdirectory(simpleAWBarrier)
+ add_subdirectory(simpleAssert)
+-add_subdirectory(simpleAssert_nvrtc)
+ add_subdirectory(simpleAtomicIntrinsics)
+-add_subdirectory(simpleAtomicIntrinsics_nvrtc)
+ add_subdirectory(simpleAttributes)
+-add_subdirectory(simpleCUDA2GL)
+ add_subdirectory(simpleCallback)
+-add_subdirectory(simpleCooperativeGroups)
+ add_subdirectory(simpleCubemapTexture)
+-add_subdirectory(simpleDrvRuntime)
+-add_subdirectory(simpleHyperQ)
+-add_subdirectory(simpleIPC)
+ add_subdirectory(simpleLayeredTexture)
+-add_subdirectory(simpleMPI)
+ add_subdirectory(simpleMultiCopy)
+ add_subdirectory(simpleMultiGPU)
+ add_subdirectory(simpleOccupancy)
+-add_subdirectory(simpleP2P)
+ add_subdirectory(simplePitchLinearTexture)
+ add_subdirectory(simplePrintf)
+ add_subdirectory(simpleStreams)
+ add_subdirectory(simpleSurfaceWrite)
+ add_subdirectory(simpleTemplates)
+ add_subdirectory(simpleTexture)
+-add_subdirectory(simpleTexture3D)
+-add_subdirectory(simpleTextureDrv)
+ add_subdirectory(simpleVoteIntrinsics)
+ add_subdirectory(simpleZeroCopy)
+ add_subdirectory(template)
+-add_subdirectory(systemWideAtomics)
+ add_subdirectory(vectorAdd)
+-add_subdirectory(vectorAddDrv)
+-add_subdirectory(vectorAddMMAP)
+-add_subdirectory(vectorAdd_nvrtc)
+diff --git a/Samples/0_Introduction/UnifiedMemoryStreams/CMakeLists.txt b/Samples/0_Introduction/UnifiedMemoryStreams/CMakeLists.txt
+index b86e9cb1..532a6967 100644
+--- a/Samples/0_Introduction/UnifiedMemoryStreams/CMakeLists.txt
++++ b/Samples/0_Introduction/UnifiedMemoryStreams/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(UnifiedMemoryStreams LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+@@ -36,14 +26,14 @@ if(${OpenMP_FOUND})
+     # Add target for UnifiedMemoryStreams
+     add_executable(UnifiedMemoryStreams UnifiedMemoryStreams.cu)
+ 
+-target_compile_options(UnifiedMemoryStreams PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
++    target_compile_options(UnifiedMemoryStreams PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
+ 
+-target_compile_features(UnifiedMemoryStreams PRIVATE cxx_std_17 cuda_std_17)
++    target_compile_features(UnifiedMemoryStreams PRIVATE cxx_std_17 cuda_std_17)
+ 
+     set_target_properties(UnifiedMemoryStreams PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+ 
+     target_link_libraries(UnifiedMemoryStreams PUBLIC
+-        CUDA::cublas
++        cublas
+         OpenMP::OpenMP_CXX
+     )
+ else()
+diff --git a/Samples/0_Introduction/asyncAPI/CMakeLists.txt b/Samples/0_Introduction/asyncAPI/CMakeLists.txt
+index ec50945b..f575d3c7 100644
+--- a/Samples/0_Introduction/asyncAPI/CMakeLists.txt
++++ b/Samples/0_Introduction/asyncAPI/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(asyncAPI LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/clock/CMakeLists.txt b/Samples/0_Introduction/clock/CMakeLists.txt
+index b9d71781..ecc28401 100644
+--- a/Samples/0_Introduction/clock/CMakeLists.txt
++++ b/Samples/0_Introduction/clock/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(clock LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/cudaOpenMP/CMakeLists.txt b/Samples/0_Introduction/cudaOpenMP/CMakeLists.txt
+index 991936c1..5ecf6267 100644
+--- a/Samples/0_Introduction/cudaOpenMP/CMakeLists.txt
++++ b/Samples/0_Introduction/cudaOpenMP/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(cudaOpenMP LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+@@ -26,9 +16,9 @@ if(OpenMP_CXX_FOUND)
+ # Add target for asyncAPI
+     add_executable(cudaOpenMP cudaOpenMP.cu)
+ 
+-target_compile_options(cudaOpenMP PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
++    target_compile_options(cudaOpenMP PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
+ 
+-target_compile_features(cudaOpenMP PRIVATE cxx_std_17 cuda_std_17)
++    target_compile_features(cudaOpenMP PRIVATE cxx_std_17 cuda_std_17)
+ 
+     set_target_properties(cudaOpenMP PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+     target_link_libraries(cudaOpenMP PUBLIC
+diff --git a/Samples/0_Introduction/fp16ScalarProduct/CMakeLists.txt b/Samples/0_Introduction/fp16ScalarProduct/CMakeLists.txt
+index 3f2a3d34..1b43a61b 100644
+--- a/Samples/0_Introduction/fp16ScalarProduct/CMakeLists.txt
++++ b/Samples/0_Introduction/fp16ScalarProduct/CMakeLists.txt
+@@ -1,20 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(fp16ScalarProduct LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/matrixMul/CMakeLists.txt b/Samples/0_Introduction/matrixMul/CMakeLists.txt
+index 9293df3f..9a3159b9 100644
+--- a/Samples/0_Introduction/matrixMul/CMakeLists.txt
++++ b/Samples/0_Introduction/matrixMul/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(matrixMul LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/matrixMulDynlinkJIT/CMakeLists.txt b/Samples/0_Introduction/matrixMulDynlinkJIT/CMakeLists.txt
+index 6cd324cd..6eb45cce 100644
+--- a/Samples/0_Introduction/matrixMulDynlinkJIT/CMakeLists.txt
++++ b/Samples/0_Introduction/matrixMulDynlinkJIT/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(matrixMulDynlinkJIT LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+@@ -38,14 +28,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clan
+ endif()
+ 
+ target_link_libraries(matrixMulDynlinkJIT PUBLIC
+-    CUDA::cudart
+-    CUDA::cuda_driver
++    cudart
+ )
+ 
+ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+     target_link_libraries(matrixMulDynlinkJIT PUBLIC dl)
+ endif()
+ 
+-# Include installation configuration
+-include(${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/InstallSamples.cmake)
+-setup_samples_install()
++install(TARGETS matrixMulDynlinkJIT RUNTIME DESTINATION ${CMAKE_INSTALL_CUDA_SAMPLES})
+diff --git a/Samples/0_Introduction/simpleAssert/CMakeLists.txt b/Samples/0_Introduction/simpleAssert/CMakeLists.txt
+index ab0406c8..72d3ccc3 100644
+--- a/Samples/0_Introduction/simpleAssert/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleAssert/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleAssert LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Removes -DNDEBUG For Print specific logs in this sample.
+ string(REPLACE "-DNDEBUG" "" CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE}")
+ 
+diff --git a/Samples/0_Introduction/simpleAtomicIntrinsics/CMakeLists.txt b/Samples/0_Introduction/simpleAtomicIntrinsics/CMakeLists.txt
+index 7ec8e447..b7c0677f 100644
+--- a/Samples/0_Introduction/simpleAtomicIntrinsics/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleAtomicIntrinsics/CMakeLists.txt
+@@ -1,22 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleAtomicIntrinsics LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES  75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleAttributes/CMakeLists.txt b/Samples/0_Introduction/simpleAttributes/CMakeLists.txt
+index d481f57b..4d56150a 100644
+--- a/Samples/0_Introduction/simpleAttributes/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleAttributes/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleAttributes LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleCallback/CMakeLists.txt b/Samples/0_Introduction/simpleCallback/CMakeLists.txt
+index 8c19b28f..8d7d8e47 100644
+--- a/Samples/0_Introduction/simpleCallback/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleCallback/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleCallback LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleCubemapTexture/CMakeLists.txt b/Samples/0_Introduction/simpleCubemapTexture/CMakeLists.txt
+index 2ec278b2..1275246c 100644
+--- a/Samples/0_Introduction/simpleCubemapTexture/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleCubemapTexture/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleCubemapTexture LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleLayeredTexture/CMakeLists.txt b/Samples/0_Introduction/simpleLayeredTexture/CMakeLists.txt
+index 86ad2817..2d868ba4 100644
+--- a/Samples/0_Introduction/simpleLayeredTexture/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleLayeredTexture/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleLayeredTexture LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleMultiCopy/CMakeLists.txt b/Samples/0_Introduction/simpleMultiCopy/CMakeLists.txt
+index 1e2d809e..675ce872 100644
+--- a/Samples/0_Introduction/simpleMultiCopy/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleMultiCopy/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleMultiCopy LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleMultiGPU/CMakeLists.txt b/Samples/0_Introduction/simpleMultiGPU/CMakeLists.txt
+index e88e0c29..3915eeb2 100644
+--- a/Samples/0_Introduction/simpleMultiGPU/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleMultiGPU/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleMultiGPU LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleOccupancy/CMakeLists.txt b/Samples/0_Introduction/simpleOccupancy/CMakeLists.txt
+index fbd4ec77..9065281c 100644
+--- a/Samples/0_Introduction/simpleOccupancy/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleOccupancy/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleOccupancy LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simplePitchLinearTexture/CMakeLists.txt b/Samples/0_Introduction/simplePitchLinearTexture/CMakeLists.txt
+index 7a72745c..b041b492 100644
+--- a/Samples/0_Introduction/simplePitchLinearTexture/CMakeLists.txt
++++ b/Samples/0_Introduction/simplePitchLinearTexture/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simplePitchLinearTexture LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simplePrintf/CMakeLists.txt b/Samples/0_Introduction/simplePrintf/CMakeLists.txt
+index 8f9ca7d7..56e1db2f 100644
+--- a/Samples/0_Introduction/simplePrintf/CMakeLists.txt
++++ b/Samples/0_Introduction/simplePrintf/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simplePrintf LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleStreams/CMakeLists.txt b/Samples/0_Introduction/simpleStreams/CMakeLists.txt
+index 8e4be29e..3c16868e 100644
+--- a/Samples/0_Introduction/simpleStreams/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleStreams/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleStreams LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleSurfaceWrite/CMakeLists.txt b/Samples/0_Introduction/simpleSurfaceWrite/CMakeLists.txt
+index f7c5d5fc..e3938561 100644
+--- a/Samples/0_Introduction/simpleSurfaceWrite/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleSurfaceWrite/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleSurfaceWrite LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleTemplates/CMakeLists.txt b/Samples/0_Introduction/simpleTemplates/CMakeLists.txt
+index e4ae61e1..84eebc98 100644
+--- a/Samples/0_Introduction/simpleTemplates/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleTemplates/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleTemplates LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleTexture/CMakeLists.txt b/Samples/0_Introduction/simpleTexture/CMakeLists.txt
+index d6a37b65..5379d7e7 100644
+--- a/Samples/0_Introduction/simpleTexture/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleTexture/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleTexture LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleVoteIntrinsics/CMakeLists.txt b/Samples/0_Introduction/simpleVoteIntrinsics/CMakeLists.txt
+index 11fa110f..0798f019 100644
+--- a/Samples/0_Introduction/simpleVoteIntrinsics/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleVoteIntrinsics/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleVoteIntrinsics LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/simpleZeroCopy/CMakeLists.txt b/Samples/0_Introduction/simpleZeroCopy/CMakeLists.txt
+index 536271db..a77d183f 100644
+--- a/Samples/0_Introduction/simpleZeroCopy/CMakeLists.txt
++++ b/Samples/0_Introduction/simpleZeroCopy/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(simpleZeroCopy LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/0_Introduction/vectorAdd/CMakeLists.txt b/Samples/0_Introduction/vectorAdd/CMakeLists.txt
+index b3f03225..cd83df3b 100644
+--- a/Samples/0_Introduction/vectorAdd/CMakeLists.txt
++++ b/Samples/0_Introduction/vectorAdd/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(vectorAdd LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")  # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/1_Utilities/CMakeLists.txt b/Samples/1_Utilities/CMakeLists.txt
+index 1f3f481b..939d8efc 100644
+--- a/Samples/1_Utilities/CMakeLists.txt
++++ b/Samples/1_Utilities/CMakeLists.txt
+@@ -1,3 +1 @@
+ add_subdirectory(deviceQuery)
+-add_subdirectory(deviceQueryDrv)
+-add_subdirectory(topologyQuery)
+diff --git a/Samples/1_Utilities/deviceQuery/CMakeLists.txt b/Samples/1_Utilities/deviceQuery/CMakeLists.txt
+index 110d95cd..bac0ead7 100644
+--- a/Samples/1_Utilities/deviceQuery/CMakeLists.txt
++++ b/Samples/1_Utilities/deviceQuery/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(deviceQuery LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+@@ -34,7 +24,7 @@ target_include_directories(deviceQuery PRIVATE
+ )
+ 
+ target_link_libraries(deviceQuery PUBLIC
+-    CUDA::cudart
++    cudart
+ )
+ 
+ # Include installation configuration
+diff --git a/Samples/6_Performance/CMakeLists.txt b/Samples/6_Performance/CMakeLists.txt
+index ac54e19a..abf7ce68 100644
+--- a/Samples/6_Performance/CMakeLists.txt
++++ b/Samples/6_Performance/CMakeLists.txt
+@@ -1,5 +1 @@
+-add_subdirectory(LargeKernelParameter)
+ add_subdirectory(UnifiedMemoryPerf)
+-add_subdirectory(alignedTypes)
+-add_subdirectory(cudaGraphsPerfScaling)
+-add_subdirectory(transpose)
+diff --git a/Samples/6_Performance/UnifiedMemoryPerf/CMakeLists.txt b/Samples/6_Performance/UnifiedMemoryPerf/CMakeLists.txt
+index 9ebabf27..bcd1d002 100644
+--- a/Samples/6_Performance/UnifiedMemoryPerf/CMakeLists.txt
++++ b/Samples/6_Performance/UnifiedMemoryPerf/CMakeLists.txt
+@@ -1,21 +1,11 @@
+ cmake_minimum_required(VERSION 3.20)
+ 
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules")
+-
+ project(UnifiedMemoryPerf LANGUAGES C CXX CUDA)
+ 
+ find_package(CUDAToolkit REQUIRED)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
+-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+-if(ENABLE_CUDA_DEBUG)
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")        # enable cuda-gdb (may significantly affect performance on some targets)
+-else()
+-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
+-endif()
+-
+ # Include directories and libraries
+ include_directories(../../../Common)
+ 
+diff --git a/Samples/CMakeLists.txt b/Samples/CMakeLists.txt
+index 3f7a8f3c..f728b737 100644
+--- a/Samples/CMakeLists.txt
++++ b/Samples/CMakeLists.txt
+@@ -9,25 +9,6 @@ add_subdirectory(0_Introduction)
+ set(CMAKE_FOLDER "1_Utilities")
+ add_subdirectory(1_Utilities)
+ 
+-set(CMAKE_FOLDER "2_Concepts_and_Techniques")
+-add_subdirectory(2_Concepts_and_Techniques)
+-
+-set(CMAKE_FOLDER "3_CUDA_Features")
+-add_subdirectory(3_CUDA_Features)
+-
+-set(CMAKE_FOLDER "4_CUDA_Libraries")
+-add_subdirectory(4_CUDA_Libraries)
+-
+-set(CMAKE_FOLDER "5_Domain_Specific")
+-add_subdirectory(5_Domain_Specific)
+-
+ set(CMAKE_FOLDER "6_Performance")
+ add_subdirectory(6_Performance)
+ 
+-set(CMAKE_FOLDER "7_libNVVM")
+-add_subdirectory(7_libNVVM)
+-
+-if(BUILD_TEGRA)
+-    set(CMAKE_FOLDER "8_Platform_Specific/Tegra")
+-    add_subdirectory(8_Platform_Specific/Tegra)
+-endif()
+diff --git a/cmake/InstallSamples.cmake b/cmake/InstallSamples.cmake
+index 667bc077..c01c8493 100644
+--- a/cmake/InstallSamples.cmake
++++ b/cmake/InstallSamples.cmake
+@@ -112,6 +112,19 @@ endif()
+ # Function to setup installation for regular samples
+ # This should be called after all targets are defined
+ function(setup_samples_install)
++    # OE cross-build path: CMAKE_INSTALL_CUDA_SAMPLES is set by the OE recipe.
++    # Use standard install(TARGETS) so OE's do_install controls the destination.
++    if(DEFINED CMAKE_INSTALL_CUDA_SAMPLES)
++        get_directory_property(_targets BUILDSYSTEM_TARGETS)
++        foreach(_t IN LISTS _targets)
++            get_target_property(_type ${_t} TYPE)
++            if(_type STREQUAL "EXECUTABLE")
++                install(TARGETS ${_t} RUNTIME DESTINATION ${CMAKE_INSTALL_CUDA_SAMPLES})
++            endif()
++        endforeach()
++        return()
++    endif()
++
+     # Create an install script that copies executables, data files, and shared libraries
+     # This script only installs - build must be done separately
+     install(CODE "
+-- 
+2.43.0
+

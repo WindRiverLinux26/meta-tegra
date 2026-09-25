@@ -4,9 +4,10 @@ L4T_DEB_FEED_BASE ??= "https://repo.download.nvidia.com/jetson"
 
 inherit l4t_bsp
 
+L4T_BSP_DEB_BASE_VERSION = "${@bb.parse.vars_from_file(d.getVar('FILE', False),d)[1]}"
 L4T_DEB_COMP_DEFAULT = "main"
 L4T_DEB_COMP ?= "${L4T_DEB_COMP_DEFAULT}"
-L4T_X86_DEB_CLASS ??= "x86_64/jammy"
+L4T_X86_DEB_CLASS ??= "x86_64/noble"
 
 def l4t_deb_src_uri(d):
     def generate_uris(d, debclass, deblist):
@@ -45,19 +46,9 @@ def l4t_deb_src_uri(d):
 def l4t_deb_pkgname(d, name):
     if not name.startswith('nvidia-l4t-'):
         name = 'nvidia-l4t-' + name
-    return "%s_${L4T_VERSION}${@l4t_bsp_debian_version_suffix(d, pkgname='%s')}_arm64.deb" % (name, name)
+    return "%s_${L4T_BSP_DEB_BASE_VERSION}${@l4t_bsp_debian_version_suffix(d, pkgname='%s')}_arm64.deb" % (name, name)
 
 l4t_deb_src_uri[vardepsexclude] += "L4T_DEB_SOCNAME"
 
 SRC_URI = "${@l4t_deb_src_uri(d)}"
 do_unpack[depends] += "zstd-native:do_populate_sysroot"
-
-do_unpack[depends] += "tar-l4t-workaround-native:do_populate_sysroot"
-EXTRANATIVEPATH:append:task-unpack = " tar-l4t-workaround-native"
-
-do_unpack:prepend() {
-    path = d.getVar('PATH')
-    subpath = ':'.join([p for p in path.split(':') if 'tar-l4t-workaround-native' not in p])
-    os.environ['TAR_WRAPPER_STRIPPED_PATH'] = subpath
-    os.environ['PATH'] = path
-}

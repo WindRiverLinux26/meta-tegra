@@ -48,3 +48,5 @@ FILES:libv4l-dev += "${includedir} ${libdir}/pkgconfig \
                      ${libdir}/v4l*${SOLIBSDEV} ${libdir}/libv4l/*.la ${libdir}/libv4l/plugins/*.la"
 RRECOMMENDS:libv4l = "tegra-libraries-multimedia-v4l"
 PACKAGE_ARCH = "${TEGRA_PKGARCH}"
+
+CVE_PRODUCT = "v4l-utils"

@@ -1,8 +1,8 @@
 DESCRIPTION = "Out-of-tree kernel modules and device trees for Jetson Linux platforms"
 LICENSE = "GPL-2.0-only & BSD-3-Clause & (MIT | GPL-2.0-only)"
-LIC_FILES_CHKSUM = "file://nvdisplay/COPYING;md5=1d5fa2a493e937d5a4b96e5e03b90f7c \
+LIC_FILES_CHKSUM = "file://unifiedgpudisp/COPYING;md5=1d5fa2a493e937d5a4b96e5e03b90f7c \
                     file://Makefile;beginline=2;endline=2;md5=a670216ac93e92dc066b1a876610705f \
-		    file://nvidia-oot/Makefile;endline=1;md5=daad6f7f7a0a286391cd7773ccf79340"
+                    file://nvidia-oot/Makefile;endline=1;md5=829e563511c9a1d6d41f17a7a4989d6a"
 
 TEGRA_UEFI_SIGNING_CLASS ??= "tegra-uefi-signing"
 
@@ -14,75 +14,25 @@ COMPATIBLE_MACHINE = "(tegra)"
 B = "${S}"
 
 COMMON_PATCHES = "\
-    file://0001-Reapply-OE-patches-to-main-Makefile.patch \
-    file://0002-Update-conftest-and-makefiles-for-OE-builds.patch;patchdir=nvdisplay \
-    file://0003-conftest-add-fshort-wchar-to-compilation-commands.patch;patchdir=nvdisplay \
-    file://0004-conftest-fix-dma_buf_has_dynamic_attachment-test.patch;patchdir=nvdisplay \
-    file://0005-Kbuild-add-EXTRA_CFLAGS-to-ccflags-y-when-necessary.patch;patchdir=nvdisplay \
-    file://0006-Kbuild-Fix-quoting-on-NV_VERSION_STRING.patch;patchdir=nvdisplay \
-    file://0007-Kbuild-fix-symlink-commands.patch;patchdir=nvdisplay \
-    file://0008-conftest-fix-drm_gem_object_vmap_has_map_arg-check.patch;patchdir=nvdisplay \
-    file://0009-nvdisplay-kernel-open-correct-parameter-of-macro-MOD.patch;patchdir=nvdisplay \
-    file://0010-nvdisplay-timer-replace-hrtimer_init-with-hrtimer_se.patch;patchdir=nvdisplay \
-    file://0011-nvdisplay-nvidia-check-importer-operations-directly.patch;patchdir=nvdisplay \
-    file://0012-nvdisplay-timer-replace-del_timer_sync-with-timer_de.patch;patchdir=nvdisplay \
-    file://0013-nvdisplay-nvidia-drm-fb-add-format-info-parameter-to.patch;patchdir=nvdisplay \
-    file://0014-nvdisplay-nvidia-drm-remove-unused-date-member.patch;patchdir=nvdisplay \
-    file://0015-nvdisplay-nvidia-drm-add-constify-attribute-for-stru.patch;patchdir=nvdisplay \
-    file://0016-tegra-virt-alt-Remove-leading-from-include-path-from.patch;patchdir=nvidia-oot \
-    file://0018-gpio-Use-conftest-to-find-if-struct-gpio_chip-has-of.patch;patchdir=nvidia-oot \
-    file://0019-drivers-Fix-gpio_chip-.set-callback-for-v6.17.patch;patchdir=nvidia-oot \
-    file://0020-r8126-use-conftest-for-hrtimer_init.patch;patchdir=nvidia-oot \
-    file://0021-drivers-Fix-from_timer-for-Linux-v6.16.patch;patchdir=nvidia-oot \
-    file://0022-BT-deprecate-support-for-of_gpio-calls.patch;patchdir=nvidia-oot \
-    file://0023-misc-bluedroid_pm-Use-wakeup_source_register-unregis.patch;patchdir=nvidia-oot \
-    file://0024-misc-bluedroid-remove-duplicate-timer-declaration.patch;patchdir=nvidia-oot \
-    file://0025-misc-bluedroid_pm-Fix-optional-GPIOs.patch;patchdir=nvidia-oot \
-    file://0026-misc-bluedroid_pm-Verify-wakeup-registration.patch;patchdir=nvidia-oot \
-    file://0027-misc-bluedroid_pm-Free-proc-on-failure.patch;patchdir=nvidia-oot \
-    file://0028-misc-bluedroid_pm-Ensure-host_wake-is-configured.patch;patchdir=nvidia-oot \
-    file://0029-kernel-oot-update-driver-license-to-GPL.patch;patchdir=nvidia-oot \
-    file://0030-virt-hvc_sysfs-Fix-build-for-Linux-v6.16.patch;patchdir=nvidia-oot \
-    file://0031-platform-tegra-uss-io-proxy-Migrate-to-GPIOD.patch;patchdir=nvidia-oot \
-    file://0032-virt-tegra-Fix-build-for-Linux-v6.17.patch;patchdir=nvidia-oot \
-    file://0033-drivers-crypto-add-priv-pointer-in-context-struct-to.patch;patchdir=nvidia-oot \
-    file://0034-drivers-nvmap-calculate-page-address-explicitly.patch;patchdir=nvidia-oot \
-    file://0035-ASoC-tegra-Fix-build-for-Linux-v6.15.patch;patchdir=nvidia-oot \
-    file://0036-sound-soc-set-Codec-Stream-Card-name-explicitly.patch;patchdir=nvidia-oot \
-    file://0037-crypto-tegra-Remove-an-incorrect-iommu_fwspec_free-c.patch;patchdir=nvidia-oot \
-    file://0038-sound-soc-use-reasonable-SND_SOC_DAIFMT_CBx_CFx.patch;patchdir=nvidia-oot \
-    file://0039-sound-soc-replace-idle_bias_off-with-idle_bias.patch;patchdir=nvidia-oot \
-    file://0040-video-tegra-nvmap-Take-lock-before-reading-dmabuf-s-.patch;patchdir=nvidia-oot \
-    file://0041-video-tegra-nvmap-Fix-f_count-for-Linux-v6.13.patch;patchdir=nvidia-oot \
-    file://0042-drivers-realtek-bt-replace-set_bit-with-hci_set_quir.patch;patchdir=nvidia-oot \
-    file://0043-net-marvell-oak-Fix-build-for-Linux-v6.16.patch;patchdir=nvidia-oot \
-    file://0044-drm-tegra-syncpoint-base-support-for-chips-t186.patch;patchdir=nvidia-oot \
-    file://0045-drm-tegra-move-disply-related-code-under-CONFIG_DRM_.patch;patchdir=nvidia-oot \
-    file://0046-drm-tegra-gem-Open-code-drm_prime_gem_destroy.patch;patchdir=nvidia-oot \
-    file://0047-drm-tegra-gem-Don-t-attach-dma-bufs-when-not-needed.patch;patchdir=nvidia-oot \
-    file://0048-drm-tegra-Update-to-Linux-v6.8.patch;patchdir=nvidia-oot \
-    file://0049-drm-tegra-Update-to-Linux-v6.12.patch;patchdir=nvidia-oot \
-    file://0050-drm-tegra-Update-to-Linux-v6.13.patch;patchdir=nvidia-oot \
-    file://0051-drm-tegra-Update-to-Linux-v6.14.patch;patchdir=nvidia-oot \
-    file://0052-drm-tegra-Update-to-Linux-v6.16-rc1.patch;patchdir=nvidia-oot \
-    file://0053-drm-tegra-Fix-build-for-Linux-v6.17.patch;patchdir=nvidia-oot \
-    file://0054-net-can-mttcan-Fix-build-for-Linux-v6.16.patch;patchdir=nvidia-oot \
-    file://0055-net-can-mttcan-Drop-support-for-legacy-kernels.patch;patchdir=nvidia-oot \
-    file://0056-net-can-mttcan-Fix-build-for-Linux-v6.17.patch;patchdir=nvidia-oot \
-    file://0057-nvmap-Remove-dma_buf_ops-flag-cache_sgt_mapping.patch;patchdir=nvidia-oot \
-    file://0058-drm-tegra-Fix-build-for-Linux-v6.14.patch;patchdir=nvidia-oot \
-    file://0059-sound-soc-replace-of_property_read_bool-with-of_prop.patch;patchdir=nvidia-oot \
-    file://0060-bluetooth-fix-build-issues-with-Linux-v6.18.patch;patchdir=nvidia-oot \
-    file://0061-tegra-hwpm-Fix-build-for-Linux-v6.13.patch;patchdir=hwpm \
-    file://0062-gpu-nvgpu-correct-parameter-of-macro-MODULE_IMPORT_N.patch;patchdir=nvgpu \
-    file://0063-nvgpu-timer-replace-hrtimer_init-with-hrtimer_setup.patch;patchdir=nvgpu \
-    file://0064-nvdisplay-nvidia-drm-support-fbdev-on-Linux-6.11-ker.patch;patchdir=nvdisplay \
-    file://0065-nvdisplay-nvidia-drm-trigger-connector-detect-on-hot.patch;patchdir=nvdisplay \
-    file://0066-nvdisplay-nvidia-drm-update-legacy-modeset-state-on-.patch;patchdir=nvdisplay \
+    file://0001-conftest-work-around-stringify-issue-with-__assign_s.patch;patchdir=nvidia-oot \
+    file://0002-bluetooth-fix-build-issues-with-Linux-v6.18.patch;patchdir=nvidia-oot \
+    file://0003-Fix-unifiedgpudisp-modules-builds.patch;patchdir=unifiedgpudisp \
+    file://0004-Fix-unifiedgpudisp-conftest-gcc-14-compatibility-iss.patch;patchdir=unifiedgpudisp \
+    file://0005-nvdisplay-nvidia-drm-trigger-connector-detect-on-hot.patch;patchdir=nvdisplay \
+    file://0006-drm-tegra-Migrate-to-PMC-contextual-power-APIs.patch;patchdir=nvidia-oot \
+    file://0001-t23x-overlay-add-dts-to-support-Arducam-6-channels-o.patch;patchdir=hardware/nvidia/t23x/nv-public \
 "
+
 EXTRA_PATCHES ??= ""
 
 SRC_URI += "${COMMON_PATCHES} ${EXTRA_PATCHES}"
+
+do_unpack[depends] += "tegra-kernel-makefile:do_populate_sysroot"
+
+unpack_makefile_from_bsp() {
+    [ -e ${S}/Makefile ] || cp ${STAGING_DATADIR}/nvidia-kernel/Makefile ${S}/
+}
+do_unpack[postfuncs] += "unpack_makefile_from_bsp"
 
 KERNEL_MODULE_PACKAGE_PREFIX = "nv-"
 
@@ -93,53 +43,36 @@ KERNEL_MODULE_PACKAGE_PREFIX = "nv-"
 # settings in conf/machine/include/tegra-common.inc accordingly
 TEGRA_OOT_REPLACEMENT_DRIVERS = "\
     host1x \
-    snd-soc-tegra186-asrc \
-    snd-soc-tegra186-dspk \
-    snd-soc-tegra210-admaif \
-    snd-soc-tegra210-adx \
-    snd-soc-tegra210-ahub \
-    snd-soc-tegra210-amx \
-    snd-soc-tegra210-dmic \
-    snd-soc-tegra210-i2s \
-    snd-soc-tegra210-mixer \
-    snd-soc-tegra210-mvc \
-    snd-soc-tegra210-ope \
-    snd-soc-tegra210-sfc \
     tegra-bpmp-thermal \
     tegra-drm \
 "
 
 EXTRA_OEMAKE += '\
-    IGNORE_PREEMPT_RT_PRESENCE=1 KERNEL_PATH="${STAGING_KERNEL_BUILDDIR}" \
-    CC="${KERNEL_CC} -std=gnu17 -Wno-error=header-guard -Wno-error=enum-int-mismatch" CXX="${KERNEL_CC} -x c++" LD="${KERNEL_LD}" AR="${KERNEL_AR}" \
-    OBJCOPY="${KERNEL_OBJCOPY}" \
+    OE_BUILD=1 \
+    IGNORE_PREEMPT_RT_PRESENCE=1 KERNEL_HEADERS="${STAGING_KERNEL_DIR}" KERNEL_OUTPUT="${STAGING_KERNEL_BUILDDIR}" \
+    CC="${KERNEL_CC} -std=gnu17 -Wno-error=header-guard" CXX="${KERNEL_CC} -x c++" LD="${KERNEL_LD}" AR="${KERNEL_AR}" \
+    OBJCOPY="${KERNEL_OBJCOPY}" kernel_name="oot" \
 '
+
+EXTRA_OEMAKE:append:tegra264 = ' NVIDIA_DISPLAY_MODULE_TARGETS="nvidia-gpu-display"'
+EXTRA_OEMAKE:append:tegra234 = ' NVIDIA_DISPLAY_MODULE_TARGETS="nvidia-display"'
+
+# The makefile defaults for linux-noble differ from the concerns of linux-yocto
+TEGRA_OOT_MODULE_SKIP_MAKEFLAGS_LINUX_YOCTO = "\
+    NV_OOT_REALTEK_RTL8822CE_SKIP_BUILD=y \
+    NV_OOT_REALTEK_RTL8852CE_SKIP_BUILD=y \
+"
+TEGRA_OOT_MODULE_SKIP_MAKEFLAGS ??= "${@d.getVar('TEGRA_OOT_MODULE_SKIP_MAKEFLAGS_LINUX_YOCTO') if 'linux-yocto' in (d.getVar('PREFERRED_PROVIDER_virtual/kernel') or '') else ''}"
+EXTRA_OEMAKE += "${TEGRA_OOT_MODULE_SKIP_MAKEFLAGS}"
 
 do_compile() {
     unset CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
     oe_runmake modules
-    oe_runmake dtbs
 }
-
-do_sign_dtbs() {
-    for dtbf in ${KERNEL_DEVICETREE}; do
-        local dtb="${B}/kernel-devicetree/generic-dts/dtbs/${dtbf}"
-        if [ -e "$dtb" ]; then
-            tegra_uefi_attach_sign "$dtb"
-        fi
-    done
-}
-do_sign_dtbs[dirs] = "${B}"
-do_sign_dtbs[depends] += "${TEGRA_UEFI_SIGNING_TASKDEPS}"
-do_sign_dtbs[file-checksums] += "${TEGRA_UEFI_SIGNING_FILECHECKSUMS}"
-
-addtask sign_dtbs after do_compile before do_install
 
 do_install() {
     unset CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
     oe_runmake MODLIB="${D}${nonarch_base_libdir}/modules/${KERNEL_VERSION}" modules_install
-    install -d ${D}/boot/devicetree
-    install -m 0644 ${B}/kernel-devicetree/generic-dts/dtbs/* ${D}/boot/devicetree/
     install -d ${D}${includedir}/${BPN}
     ln -s ${BPN} ${D}${includedir}/kernel-module-${BPN}
     find ${B} -name Module.symvers -type f | xargs sed -e's:${B}/::g' >${D}${includedir}/${BPN}/Module.symvers
@@ -149,17 +82,15 @@ do_install() {
     # include device-tree source for building external dtb
     install -d ${D}/usr/src/device-tree
     cp -R ${S}/hardware/nvidia/ ${D}/usr/src/device-tree
+    find ${D}/usr/src/device-tree -name '.git' -depth -type d -exec rm -rf '{}' ';'
 }
 
-SYSROOT_DIRS += "/boot/devicetree"
 SYSROOT_DIRS += "/usr/src/device-tree"
 
-KERNEL_MODULE_PROBECONF = "nvgpu"
-module_conf_nvgpu = 'options nvgpu devfreq_timer="delayed"'
+PACKAGES =+ "${PN}-display ${PN}-cameras ${PN}-bluetooth ${PN}-wifi ${PN}-canbus ${PN}-virtualization ${PN}-alsa ${PN}-test ${PN}-base ${PN}-extra ${PN}-compute"
+PACKAGES:append:tegra234 = " ${PN}-compute-nvgpu"
 
-PACKAGES =+ "${PN}-devicetrees ${PN}-display ${PN}-cameras ${PN}-bluetooth ${PN}-wifi ${PN}-canbus ${PN}-virtualization ${PN}-alsa ${PN}-test ${PN}-base ${PN}-extra"
 PROVIDES += "kernel-module-${BPN}"
-FILES:${PN}-devicetrees = "/boot/devicetree"
 FILES:${PN}-dev = "\
     ${includedir}/${BPN} \
     ${includedir}/kernel-module-${BPN} \
@@ -175,6 +106,8 @@ ALLOW_EMPTY:${PN}-alsa = "1"
 ALLOW_EMPTY:${PN}-test = "1"
 ALLOW_EMPTY:${PN}-base = "1"
 ALLOW_EMPTY:${PN}-extra = "1"
+ALLOW_EMPTY:${PN}-compute = "1"
+ALLOW_EMPTY:${PN}-compute-nvgpu = "1"
 
 RDEPENDS:${PN}-display = "${TEGRA_OOT_DISPLAY_DRIVERS}"
 RDEPENDS:${PN}-cameras = "${TEGRA_OOT_CAMERA_DRIVERS}"
@@ -185,6 +118,8 @@ RDEPENDS:${PN}-virtualization = "${TEGRA_OOT_VIRTUALIZATION_DRIVERS}"
 RDEPENDS:${PN}-alsa = "${TEGRA_OOT_ALSA_DRIVERS}"
 RDEPENDS:${PN}-test = "${TEGRA_OOT_TEST_DRIVERS}"
 RDEPENDS:${PN}-base = "${TEGRA_OOT_BASE_DRIVERS}"
+RDEPENDS:${PN}-compute = "${TEGRA_OOT_COMPUTE_DRIVERS}"
+RDEPENDS:${PN}-compute-nvgpu = "${TEGRA_OOT_NVGPU_COMPUTE_DRIVERS}"
 RRECOMMENDS:${PN}-extra = "${TEGRA_OOT_EXTRA_DRIVERS}"
 
 TEGRA_OOT_ALL_DRIVER_PACKAGES = ""
@@ -229,7 +164,6 @@ TEGRA_OOT_CAMERA_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-capture \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-isp5 \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-nvcsi \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-nvcsi-t194 \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-vi5 \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-vi-tpg-t19x \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nv-imx185 \
@@ -245,6 +179,7 @@ TEGRA_OOT_CAMERA_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-camera-rtcpu \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-virtual-i2c-mux \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-max929x \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-capture-coe \
     ${TEGRA_OOT_EXTRA_CAMERA_DRIVERS} \
 "
 TEGRA_OOT_ALL_DRIVER_PACKAGES += "${TEGRA_OOT_CAMERA_DRIVERS}"
@@ -268,13 +203,14 @@ TEGRA_OOT_CANBUS_DRIVERS ?= "\
     ${TEGRA_OOT_EXTRA_CANBUS_DRIVERS} \
 "
 TEGRA_OOT_ALL_DRIVER_PACKAGES += "${TEGRA_OOT_CANBUS_DRIVERS}"
-TEGRA_OOT_EXTRA_VIRUTALIZATION_DRIVERS ??= ""
+TEGRA_OOT_EXTRA_VIRTUALIZATION_DRIVERS ??= ""
 TEGRA_OOT_VIRTUALIZATION_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-hvc-sysfs \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nv-virtio-console-poc \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-pcie-tegra-vf \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra-virt-t210ref-pcm \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-virt-alt-admaif \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-virt-alt-adsp \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-gr-comm \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-mtd \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-pm-ctl \
@@ -284,27 +220,16 @@ TEGRA_OOT_VIRTUALIZATION_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-vblk \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-vnet \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-userspace-ivc-mempool \
-    ${TEGRA_OOT_EXTRA_VIRUTALIZATION_DRIVERS} \
+    ${TEGRA_OOT_EXTRA_VIRTUALIZATION_DRIVERS} \
 "
 TEGRA_OOT_ALL_DRIVER_PACKAGES += "${TEGRA_OOT_VIRTUALIZATION_DRIVERS}"
 TEGRA_OOT_EXTRA_ALSA_DRIVERS ??= ""
 TEGRA_OOT_ALSA_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra186-arad \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra186-asrc \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra186-dspk \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-admaif \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-adx \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-adsp \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-afc \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-ahub \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-amx \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-dmic \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-i2s \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-iqc \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-mixer \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-mvc \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-ope \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra210-sfc \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra-machine-driver \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra-controls \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-snd-soc-tegra-utils \
     ${TEGRA_OOT_EXTRA_ALSA_DRIVERS} \
 "
@@ -336,7 +261,6 @@ TEGRA_OOT_BASE_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-mc-hwpm \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-mc-utils \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvethernet \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvgpu \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-nvdla \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhost-pva \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvhwpm \
@@ -365,14 +289,25 @@ TEGRA_OOT_BASE_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tsecriscv \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-ufs-tegra \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-watchdog-tegra-t18x \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nv-gpu-static-pg \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-bpmp-bwmgr \
     ${TEGRA_OOT_EXTRA_BASE_DRIVERS} \
 "
 TEGRA_OOT_ALL_DRIVER_PACKAGES += "${TEGRA_OOT_BASE_DRIVERS}"
+TEGRA_OOT_COMPUTE_DRIVERS = "\
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvidia-uvm \
+"
+TEGRA_OOT_NVGPU_COMPUTE_DRIVERS = "\
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvgpu \
+"
+TEGRA_OOT_ALL_DRIVER_PACKAGES += "\
+    ${TEGRA_OOT_COMPUTE_DRIVERS} \
+    ${TEGRA_OOT_NVGPU_COMPUTE_DRIVERS} \
+"
 TEGRA_OOT_EXTRA_OTHER_DRIVERS ??= ""
 TEGRA_OOT_OTHER_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-f75308 \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-gpio-max77851 \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-i2c-tegra-slave-byte \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-ioctl-example \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-kfuse \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-lan743x \
@@ -393,13 +328,40 @@ TEGRA_OOT_OTHER_DRIVERS ?= "\
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-softdog-platform \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-spi-aurix-tegra \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-spi-tegra124-slave \
-    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-cec \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-fsicom \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-vse-safety \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-pcie-edma \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-uss-io-proxy \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-ti-fpdlink-dp-serializer \
     ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-wch \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-aocluster \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-cpuidle-cg-disable-t264 \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-se-kds \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-host1x-emu \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-i2c-tegra-slave-byte \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-capture-isp \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-mc-t26x \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-mem-qual \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-smmu-hwpm \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra264-mc-hwpm \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-cec \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvtzvault \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-pcie-tegra264-ep \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-pcie-tegra264 \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-pcie-dma-lib \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-xhci-debug \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-xhci \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvadsp \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvdisp-serdes \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-comm \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-max96712-tpg \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-max96726-tpg \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-oops-nvlog \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-sysfs-sample-server \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-tegra-hv-net \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nvtzvault-soc-comms \
+    ${KERNEL_MODULE_PACKAGE_PREFIX}kernel-module-nv-vsock-transport \
     ${TEGRA_OOT_EXTRA_OTHER_DRIVERS} \
 "
 TEGRA_OOT_ALL_DRIVER_PACKAGES += "${TEGRA_OOT_OTHER_DRIVERS}"
@@ -462,8 +424,3 @@ python oot_update_rprovides() {
             d.setVar('RDEPENDS:' + oot_pkg, newdepstr)
 }
 PACKAGESPLITFUNCS += "oot_update_rprovides"
-
-# Prevent to load tegra23x_perf_uncore, because it is not compatible with pum driver
-# of kernel v6.12, and cause hardware events lose.
-KERNEL_MODULE_PROBECONF += "tegra23x_perf_uncore"
-module_conf_tegra23x_perf_uncore = "blacklist tegra23x_perf_uncore"

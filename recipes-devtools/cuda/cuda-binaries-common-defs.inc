@@ -1,6 +1,6 @@
 COMPATIBLE_MACHINE:class-target = "(cuda)"
 COMPATIBLE_HOST = "(x86_64|aarch64)"
-CUDA_VERSION ??= "12.6"
+CUDA_VERSION ??= "13.2"
 
 S = "${UNPACKDIR}/${BP}"
 B = "${S}"
@@ -21,3 +21,6 @@ def cuda_deb_pkg_arch(d):
 INHIBIT_PACKAGE_STRIP = "1"
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 INHIBIT_SYSROOT_STRIP = "1"
+
+CVE_PRODUCT = "nvidia:cuda_toolkit"
+CVE_VERSION = "${CUDA_VERSION}"
